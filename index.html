@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ghost Club - 公式ポータルサイト</title>
     <style>
         :root {
@@ -176,6 +177,19 @@
             border: 0;
         }
 
+
+        .video-fallback {
+            display: block;
+            text-align: right;
+            margin: -10px 0 20px 0;
+            font-size: 12px;
+            color: #ffffff;
+            text-decoration: none;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+            opacity: 0.85;
+        }
+        .video-fallback:hover { opacity: 1; text-decoration: underline; }
+
         .card-list {
             display: flex;
             flex-direction: column;
@@ -255,6 +269,93 @@
             border-color: var(--hover-orange);
             color: #ffffff;
         }
+
+        /* ===== 追加: メンバーカード ===== */
+        .member-grid { display: flex; flex-direction: column; gap: 12px; }
+        .member-card {
+            background-color: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-right: 12px;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        .member-card:hover { background-color: var(--card-hover); }
+        .member-main {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px 20px;
+            color: var(--text-color);
+            text-decoration: none;
+        }
+        a.member-main:hover { transform: translateY(-1px); }
+        .member-avatar {
+            width: 52px; height: 52px; border-radius: 50%;
+            object-fit: cover; flex-shrink: 0;
+            border: 2px solid rgba(255,255,255,0.9);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        }
+        .member-avatar.ph {
+            display: flex; align-items: center; justify-content: center;
+            background: var(--accent-group); color: #fff; font-weight: bold; font-size: 20px;
+        }
+        .member-name { font-weight: bold; font-size: 15px; }
+        .member-role { font-size: 12px; color: var(--sub-text); margin-top: 2px; }
+        .member-intro { font-size: 13px; line-height: 1.6; margin-top: 6px; white-space: pre-wrap; }
+
+        /* ===== 追加: 管理者UI ===== */
+        .title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .title-row .section-title { flex: 1; }
+        .edit-btns { display: inline-flex; gap: 6px; flex-shrink: 0; }
+        .mini-btn {
+            background: rgba(255,255,255,0.92); color: #222; border: 0;
+            padding: 5px 11px; border-radius: 14px; font-size: 12px; font-weight: bold; cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        .mini-btn:hover { background: var(--hover-orange); color: #fff; }
+        .mini-btn.danger:hover { background: #dc2626; }
+        .mini-btn.add { margin-bottom: 12px; }
+        .mini-btn.big { width: 100%; padding: 12px; font-size: 14px; border-radius: 12px; margin: 0; }
+        .section-title .edit-btns { margin-left: auto; }
+        .admin-area { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 14px; }
+        .admin-area .mode-toggle.active { background-color: var(--hover-orange); color: #fff; border-color: var(--hover-orange); }
+        .admin-note { width: 100%; text-align: center; font-size: 12px; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.6); margin: 4px 0 0; }
+
+        .modal-bg {
+            position: fixed; inset: 0; z-index: 100;
+            background: rgba(0,0,0,0.6);
+            display: flex; align-items: center; justify-content: center; padding: 16px;
+        }
+        .modal {
+            background: var(--bg-color); color: var(--text-color);
+            width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
+            border-radius: 14px; padding: 22px; box-sizing: border-box;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+        }
+        .modal h3 { margin: 0 0 16px 0; font-size: 17px; }
+        .modal label { display: block; font-size: 12px; font-weight: bold; margin: 12px 0 4px; color: var(--sub-text); }
+        .modal input[type=text], .modal input[type=number], .modal textarea {
+            width: 100%; box-sizing: border-box; padding: 9px 10px; font-size: 14px;
+            border-radius: 8px; border: 1px solid rgba(128,128,128,0.5);
+            background: var(--card-bg); color: var(--text-color); font-family: inherit;
+        }
+        .modal textarea { min-height: 80px; resize: vertical; }
+        .modal input[type=color] { width: 60px; height: 34px; padding: 0; border: 0; background: none; }
+        .modal .hint { font-size: 11px; color: var(--sub-text); margin-top: 3px; }
+        .modal .error { color: #ef4444; font-size: 13px; margin: 12px 0 0; min-height: 1em; }
+        .modal .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+        .modal .actions button {
+            padding: 9px 18px; border-radius: 18px; border: 0; font-weight: bold; cursor: pointer; font-size: 14px;
+        }
+        .modal .actions .cancel { background: rgba(128,128,128,0.3); color: var(--text-color); }
+        .modal .actions .save { background: var(--accent-group); color: #fff; }
+        .modal .actions button:disabled { opacity: 0.6; cursor: wait; }
     </style>
 </head>
 <body>
@@ -273,12 +374,13 @@
             </a>
         </div>
 
-        <!-- 2. グループメンバーの紹介 -->
+        <!-- 2. グループメンバーの紹介（データベースから表示） -->
         <div class="section">
-            <div class="section-title">グループメンバー紹介</div>
-            <div class="member-box">
-                ここにメンバーの紹介文やアイコンなどを並べられるよ！（後から自由に追加・編集できます）
+            <div class="title-row">
+                <div class="section-title">グループメンバー紹介</div>
+                <div id="memberAdd"></div>
             </div>
+            <div id="memberArea"></div>
         </div>
 
         <!-- 3. グループチャンネルの最新動画 -->
@@ -287,126 +389,369 @@
                 グループチャンネル 最新の動画
             </div>
             <div class="video-container">
-                <iframe src="https://www.youtube.com/embed/videoseries?list=PLxxxxxxx" title="YouTube video player" allowfullscreen></iframe>
+                <!-- ゴースト部: UCoE7F9FSBVOehNphFViBjBg -->
+                <iframe src="https://www.youtube.com/embed?listType=playlist&list=UULFoE7F9FSBVOehNphFViBjBg"
+                        title="YouTube video player" loading="lazy"
+                        referrerpolicy="strict-origin-when-cross-origin"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowfullscreen></iframe>
             </div>
+            <a class="video-fallback" href="https://www.youtube.com/@ghost_club_member/videos" target="_blank" rel="noopener">動画が表示されない場合はYouTubeで見る ▶</a>
         </div>
 
-        <!-- 4. 個人チャンネル (夜桜てんどん) -->
-        <div class="section">
-            <div class="section-title" style="border-color: #ff7700;">
-                <img src="tendon-icon.png" alt="夜桜てんどんアイコン" class="channel-icon">
-                夜桜てんどん (個人チャンネル)
-            </div>
-
-            <div class="sub-section-title">最新動画</div>
-            <div class="video-container">
-                <iframe src="https://www.youtube.com/embed/videoseries?list=PLxxxxxxx" title="YouTube video player" allowfullscreen></iframe>
-            </div>
-
-            <div class="sub-section-title">個人チャンネルのリンク</div>
-            <div class="card-list">
-                <a href="https://www.youtube.com/@てんどん_ch" target="_blank" class="card">
-                    <div class="card-info">
-                        <div class="card-title">メインチャンネル</div>
-                        <div class="card-sub">@てんどん_ch</div>
-                    </div>
-                    <div class="btn btn-tendon">見る</div>
-                </a>
-                <a href="https://www.youtube.com/@てんどん_ch_sub" target="_blank" class="card">
-                    <div class="card-info">
-                        <div class="card-title">サブチャンネル</div>
-                        <div class="card-sub">@てんどん_ch_sub</div>
-                    </div>
-                    <div class="btn btn-tendon">見る</div>
-                </a>
-                <a href="https://www.youtube.com/@てんどん_ch_namakoe" target="_blank" class="card">
-                    <div class="card-info">
-                        <div class="card-title">生声アカウント</div>
-                        <div class="card-sub">@てんどん_ch_namakoe</div>
-                    </div>
-                    <div class="btn btn-tendon">見る</div>
-                </a>
-            </div>
-        </div>
-
-        <!-- 5. 個人チャンネル (ぺとら) -->
-        <div class="section">
-            <div class="section-title" style="border-color: #ff4757;">
-                <img src="petra-icon.png" alt="ぺとらアイコン" class="channel-icon">
-                ぺとら (個人チャンネル)
-            </div>
-
-            <div class="sub-section-title">最新動画</div>
-            <div class="video-container">
-                <iframe src="https://www.youtube.com/embed/videoseries?list=PLxxxxxxx" title="YouTube video player" allowfullscreen></iframe>
-            </div>
-
-            <div class="sub-section-title">個人チャンネルのリンク</div>
-            <div class="card-list">
-                <a href="https://www.youtube.com/@petra-0143" target="_blank" class="card">
-                    <div class="card-info">
-                        <div class="card-title">メインアカウント</div>
-                        <div class="card-sub">@petra-0143</div>
-                    </div>
-                    <div class="btn btn-petra">見る</div>
-                </a>
-                <a href="https://www.youtube.com/@patra.ptora.0143" target="_blank" class="card">
-                    <div class="card-info">
-                        <div class="card-title">サブチャンネル</div>
-                        <div class="card-sub">@patra.ptora.0143</div>
-                    </div>
-                    <div class="btn btn-petra">見る</div>
-                </a>
-                <a href="https://www.youtube.com/user/PetoUltra-GC-510" target="_blank" class="card">
-                    <div class="card-info">
-                        <div class="card-title">生声アカウント</div>
-                        <div class="card-sub">@PetoUltra-GC-510</div>
-                    </div>
-                    <div class="btn btn-petra">見る</div>
-                </a>
-            </div>
-        </div>
+        <!-- 4. 個人チャンネル（データベースから表示） -->
+        <div id="channelArea"></div>
 
         <div class="footer-toggle">
             <button class="mode-toggle" id="modeToggleBtn">モードを切り替える</button>
+            <div class="admin-area" id="adminArea"></div>
         </div>
 
     </div>
 
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
     <script>
-        const htmlElement = document.documentElement;
-        const toggleBtn = document.getElementById('modeToggleBtn');
-        const bgLayer = document.getElementById('bgLayer');
-        const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    // ============================================================
+    //  設定は config.js に分けてあります（index.html を差し替えても消えません）
+    // ============================================================
+    const { SUPABASE_URL = '', SUPABASE_ANON_KEY = '' } = window.SITE_CONFIG || {};
 
-        function applyTheme() {
-            const savedTheme = localStorage.getItem('theme');
-            let isDark = savedTheme ? (savedTheme === 'dark') : darkModeMediaQuery.matches;
+    // データベースに接続できないとき・未設定のときに表示する内容
+    const FALLBACK_MEMBERS = [];
+    const FALLBACK_CHANNELS = [
+        {
+            id: 'tendon', name: '夜桜てんどん', color: '#ff7700', icon_url: 'tendon-icon.png',
+            youtube_channel_id: 'UCgzALvAchpNYm1Hvgn_0OcA', sort_order: 1,
+            links: [
+                { label: 'メインチャンネル', handle: '@てんどん_ch', url: 'https://www.youtube.com/@てんどん_ch' },
+                { label: 'サブチャンネル', handle: '@てんどん_ch_sub', url: 'https://www.youtube.com/@てんどん_ch_sub' },
+                { label: '生声アカウント', handle: '@てんどん_ch_namakoe', url: 'https://www.youtube.com/@てんどん_ch_namakoe' }
+            ]
+        },
+        {
+            id: 'petra', name: 'ぺとら', color: '#ff4757', icon_url: 'petra-icon.png',
+            youtube_channel_id: 'UCMJ8WfI4YRVYI4pCLCrDr5g', sort_order: 2,
+            links: [
+                { label: 'メインアカウント', handle: '@petra-0143', url: 'https://www.youtube.com/@petra-0143' },
+                { label: 'サブチャンネル', handle: '@patra.ptora.0143', url: 'https://www.youtube.com/@patra.ptora.0143' },
+                { label: '生声アカウント', handle: '@PetoUltra-GC-510', url: 'https://www.youtube.com/@PetoUltra-GC-510' }
+            ]
+        }
+    ];
 
-            if (isDark) {
-                htmlElement.setAttribute('data-theme', 'dark');
-                // ▼ ダークモード時の背景画像ファイル名を指定
-                bgLayer.style.backgroundImage = "url('bg-dark.jpg')";
-            } else {
-                htmlElement.removeAttribute('data-theme');
-                // ▼ ライトモード時の背景画像ファイル名を指定
-                bgLayer.style.backgroundImage = "url('bg-light.jpg')";
+    // ---------- 共通ヘルパー ----------
+    const $ = (s, r = document) => r.querySelector(s);
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const safeUrl = u => { try { const x = new URL(u); return /^https?:$/.test(x.protocol) ? x.href : '#'; } catch { return '#'; } };
+    const safeIcon = u => {
+        if (!u) return '';
+        if (/^(https?:)?\/\//.test(u)) return safeUrl(u.startsWith('//') ? 'https:' + u : u);
+        return /^[\w\-./%]+$/.test(u) ? u : '';
+    };
+    const validChId = id => /^UC[\w-]{22}$/.test(id || '');
+
+    // ---------- Supabase ----------
+    const sb = (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase)
+        ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+    let state = { members: FALLBACK_MEMBERS, channels: FALLBACK_CHANNELS };
+    let session = null, isAdmin = false, editMode = false, adminDebug = '';
+
+    async function loadData() {
+        if (!sb) return;
+        const [m, c] = await Promise.all([
+            sb.from('members').select('*').order('sort_order').order('created_at'),
+            sb.from('channels').select('*').order('sort_order').order('created_at')
+        ]);
+        if (m.error || c.error) { console.error('データ取得エラー', m.error || c.error); return; }
+        state = { members: m.data, channels: c.data };
+    }
+
+    async function checkAdmin() {
+        isAdmin = false;
+        adminDebug = '';
+        if (sb && session) {
+            const { data, error } = await sb.rpc('is_admin');
+            isAdmin = !error && data === true;
+            if (!isAdmin) {
+                const ids = (session.user.identities || [])
+                    .map(i => `${i.provider}:${(i.identity_data && (i.identity_data.provider_id || i.identity_data.sub)) || '?'}`).join(', ');
+                adminDebug = (error ? `エラー: ${error.message} / ` : '') + `ログイン中のID → ${ids}`;
             }
         }
+        if (!isAdmin) editMode = false;
+    }
 
-        toggleBtn.addEventListener('click', () => {
-            const currentTheme = htmlElement.getAttribute('data-theme');
-            localStorage.setItem('theme', currentTheme === 'dark' ? 'light' : 'dark');
-            applyTheme();
-        });
+    // ---------- 描画 ----------
+    function adminBtns(kind, id) {
+        if (!editMode) return '';
+        return `<span class="edit-btns">
+            <button class="mini-btn" data-act="edit" data-kind="${kind}" data-id="${esc(id)}">編集</button>
+            <button class="mini-btn danger" data-act="delete" data-kind="${kind}" data-id="${esc(id)}">削除</button>
+        </span>`;
+    }
 
-        darkModeMediaQuery.addEventListener('change', () => {
-            if (!localStorage.getItem('theme')) {
-                applyTheme();
+    function renderMembers() {
+        $('#memberAdd').innerHTML = editMode
+            ? '<button class="mini-btn add" data-act="add" data-kind="member">＋ 追加</button>' : '';
+        const box = $('#memberArea');
+        if (!state.members.length) {
+            box.innerHTML = '<div class="member-box">まだメンバーが登録されていません。</div>';
+            return;
+        }
+        box.innerHTML = '<div class="member-grid">' + state.members.map(m => {
+            const icon = safeIcon(m.icon_url);
+            const avatar = icon
+                ? `<img class="member-avatar" src="${esc(icon)}" alt="">`
+                : `<div class="member-avatar ph">${esc((m.name || '?').slice(0, 1))}</div>`;
+            const body = `${avatar}<div class="member-info">
+                <div class="member-name">${esc(m.name)}</div>
+                ${m.role ? `<div class="member-role">${esc(m.role)}</div>` : ''}
+                ${m.intro ? `<div class="member-intro">${esc(m.intro)}</div>` : ''}
+            </div>`;
+            const inner = (m.link_url && !editMode)
+                ? `<a class="member-main" href="${esc(safeUrl(m.link_url))}" target="_blank" rel="noopener">${body}</a>`
+                : `<div class="member-main">${body}</div>`;
+            return `<div class="member-card">${inner}${adminBtns('member', m.id)}</div>`;
+        }).join('') + '</div>';
+    }
+
+    function renderChannels() {
+        const html = state.channels.map(ch => {
+            const color = /^#[0-9a-fA-F]{6}$/.test(ch.color) ? ch.color : '#3b82f6';
+            const icon = safeIcon(ch.icon_url);
+            const links = Array.isArray(ch.links) ? ch.links : [];
+            const video = validChId(ch.youtube_channel_id) ? `
+                <div class="sub-section-title">最新動画</div>
+                <div class="video-container">
+                    <iframe src="https://www.youtube.com/embed?listType=playlist&list=UULF${ch.youtube_channel_id.slice(2)}"
+                            title="YouTube video player" loading="lazy"
+                            referrerpolicy="strict-origin-when-cross-origin"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowfullscreen></iframe>
+                </div>
+                <a class="video-fallback" href="https://www.youtube.com/channel/${ch.youtube_channel_id}/videos" target="_blank" rel="noopener">動画が表示されない場合はYouTubeで見る ▶</a>` : '';
+            const cards = links.map(l => `
+                <a href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener" class="card">
+                    <div class="card-info">
+                        <div class="card-title">${esc(l.label)}</div>
+                        <div class="card-sub">${esc(l.handle)}</div>
+                    </div>
+                    <div class="btn" style="background-color:${color}">見る</div>
+                </a>`).join('');
+            return `
+            <div class="section">
+                <div class="section-title" style="border-color:${color};">
+                    ${icon ? `<img src="${esc(icon)}" alt="${esc(ch.name)}アイコン" class="channel-icon">` : ''}
+                    ${esc(ch.name)} (個人チャンネル)
+                    ${adminBtns('channel', ch.id)}
+                </div>
+                ${video}
+                ${links.length ? `<div class="sub-section-title">個人チャンネルのリンク</div><div class="card-list">${cards}</div>` : ''}
+            </div>`;
+        }).join('');
+        const add = editMode
+            ? '<div class="section"><button class="mini-btn add big" data-act="add" data-kind="channel">＋ 個人チャンネルを追加</button></div>' : '';
+        $('#channelArea').innerHTML = html + add;
+    }
+
+    function renderAdminArea() {
+        const el = $('#adminArea');
+        if (!sb) { el.innerHTML = ''; return; }
+        let h = '';
+        if (!session) {
+            h = '<button class="mode-toggle" data-act="login">管理者ログイン（Discord）</button>';
+        } else {
+            if (isAdmin) h += `<button class="mode-toggle ${editMode ? 'active' : ''}" data-act="toggleEdit">${editMode ? '編集モードを終了' : '編集モード'}</button>`;
+            h += '<button class="mode-toggle" data-act="logout">ログアウト</button>';
+            if (!isAdmin) h += `<p class="admin-note">このDiscordアカウントには管理権限がありません。<br>${esc(adminDebug)}</p>`;
+        }
+        el.innerHTML = h;
+    }
+
+    function render() { renderMembers(); renderChannels(); renderAdminArea(); }
+
+    // ---------- 編集フォーム ----------
+    const FORMS = {
+        member: {
+            table: 'members', title: 'メンバー',
+            fields: [
+                { k: 'name', label: '名前', type: 'text', required: true },
+                { k: 'role', label: '肩書き・ひとこと（任意）', type: 'text' },
+                { k: 'intro', label: '自己紹介（任意）', type: 'textarea' },
+                { k: 'icon_url', label: 'アイコン', type: 'image' },
+                { k: 'link_url', label: 'リンクURL（任意・押したときの移動先）', type: 'text' },
+                { k: 'sort_order', label: '表示順（小さいほど上）', type: 'number' }
+            ]
+        },
+        channel: {
+            table: 'channels', title: '個人チャンネル',
+            fields: [
+                { k: 'name', label: '表示名（「(個人チャンネル)」は自動で付きます）', type: 'text', required: true },
+                { k: 'color', label: 'テーマカラー', type: 'color' },
+                { k: 'youtube_channel_id', label: 'YouTubeチャンネルID（最新動画の表示用）', type: 'text', hint: 'UC から始まる24文字。空なら動画は表示しません' },
+                { k: 'icon_url', label: 'アイコン', type: 'image' },
+                { k: 'links', label: 'リンク一覧（1行に1つ）', type: 'textarea', hint: '「ラベル | 表示するハンドル | URL」の形で書きます。例: メインチャンネル | @abc | https://www.youtube.com/@abc' },
+                { k: 'sort_order', label: '表示順（小さいほど上）', type: 'number' }
+            ]
+        }
+    };
+
+    function linksToText(links) {
+        return (Array.isArray(links) ? links : []).map(l => `${l.label || ''} | ${l.handle || ''} | ${l.url || ''}`).join('\n');
+    }
+    function textToLinks(t) {
+        return t.split('\n').map(line => line.split('|').map(s => s.trim()))
+            .filter(p => p.length >= 3 && p[2])
+            .map(p => ({ label: p[0], handle: p[1], url: p.slice(2).join('|') }));
+    }
+
+    async function uploadIcon(file) {
+        if (!file.type.startsWith('image/')) throw new Error('画像ファイルを選んでください');
+        if (file.size > 2 * 1024 * 1024) throw new Error('画像は2MB以下にしてください');
+        const ext = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
+        const path = `${crypto.randomUUID()}.${ext}`;
+        const { error } = await sb.storage.from('icons').upload(path, file, { contentType: file.type });
+        if (error) throw error;
+        return sb.storage.from('icons').getPublicUrl(path).data.publicUrl;
+    }
+
+    function openForm(kind, row) {
+        const def = FORMS[kind];
+        const values = row ? { ...row } : { color: '#3b82f6', sort_order: 0 };
+        if (kind === 'channel') values.links = linksToText(values.links);
+
+        const bg = document.createElement('div');
+        bg.className = 'modal-bg';
+        const fieldsHtml = def.fields.map(f => {
+            const v = values[f.k] ?? '';
+            let input;
+            if (f.type === 'textarea') input = `<textarea data-k="${f.k}">${esc(v)}</textarea>`;
+            else if (f.type === 'image') input = `<input type="text" data-k="${f.k}" value="${esc(v)}" placeholder="画像のURL（またはファイルを選択）"><input type="file" accept="image/*" data-file="${f.k}" style="margin-top:6px">`;
+            else input = `<input type="${f.type}" data-k="${f.k}" value="${esc(v)}">`;
+            return `<label>${esc(f.label)}</label>${input}${f.hint ? `<div class="hint">${esc(f.hint)}</div>` : ''}`;
+        }).join('');
+        bg.innerHTML = `<div class="modal"><h3>${esc(def.title)}を${row ? '編集' : '追加'}</h3>${fieldsHtml}
+            <p class="error"></p>
+            <div class="actions"><button class="cancel" type="button">キャンセル</button><button class="save" type="button">保存</button></div></div>`;
+        document.body.appendChild(bg);
+
+        const close = () => bg.remove();
+        $('.cancel', bg).onclick = close;
+        bg.addEventListener('mousedown', e => { if (e.target === bg) close(); });
+
+        $('.save', bg).onclick = async () => {
+            const btn = $('.save', bg), err = $('.error', bg);
+            err.textContent = '';
+            btn.disabled = true;
+            try {
+                const payload = {};
+                for (const f of def.fields) {
+                    const el = $(`[data-k="${f.k}"]`, bg);
+                    let v = el.value.trim();
+                    if (f.type === 'image') {
+                        const file = $(`[data-file="${f.k}"]`, bg).files[0];
+                        if (file) v = await uploadIcon(file);
+                    }
+                    if (f.required && !v) throw new Error(`${f.label.split('（')[0]}を入力してください`);
+                    if (f.type === 'number') v = Number(v) || 0;
+                    else if (f.k === 'links') v = textToLinks(v);
+                    else if (v === '') v = null;
+                    payload[f.k] = v;
+                }
+                if (kind === 'channel') {
+                    if (payload.youtube_channel_id && !validChId(payload.youtube_channel_id)) throw new Error('YouTubeチャンネルIDは「UC」で始まる24文字です');
+                    if (!payload.color) payload.color = '#3b82f6';
+                }
+                const q = row ? sb.from(def.table).update(payload).eq('id', row.id) : sb.from(def.table).insert(payload);
+                const { data, error } = await q.select();
+                if (error) throw error;
+                if (!data || !data.length) throw new Error('保存できませんでした（管理権限を確認してください）');
+                await loadData();
+                render();
+                close();
+            } catch (e) {
+                err.textContent = e.message || String(e);
+                btn.disabled = false;
             }
-        });
+        };
+    }
 
+    async function deleteRow(kind, id) {
+        const def = FORMS[kind];
+        if (!confirm(`この${def.title}を削除しますか？`)) return;
+        const { data, error } = await sb.from(def.table).delete().eq('id', id).select();
+        if (error || !data || !data.length) { alert('削除できませんでした: ' + (error ? error.message : '権限がありません')); return; }
+        await loadData();
+        render();
+    }
+
+    document.addEventListener('click', async e => {
+        const b = e.target.closest('[data-act]');
+        if (!b) return;
+        const { act, kind, id } = b.dataset;
+        if (act === 'login') {
+            await sb.auth.signInWithOAuth({ provider: 'discord', options: { redirectTo: location.origin + location.pathname } });
+        } else if (act === 'logout') {
+            await sb.auth.signOut();
+        } else if (act === 'toggleEdit') {
+            editMode = !editMode; render();
+        } else if (act === 'add') {
+            openForm(kind, null);
+        } else if (act === 'edit') {
+            const list = kind === 'member' ? state.members : state.channels;
+            openForm(kind, list.find(r => String(r.id) === id));
+        } else if (act === 'delete') {
+            deleteRow(kind, id);
+        }
+    });
+
+    // ---------- テーマ（ライト/ダーク） ----------
+    const htmlElement = document.documentElement;
+    const toggleBtn = document.getElementById('modeToggleBtn');
+    const bgLayer = document.getElementById('bgLayer');
+    const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    function applyTheme() {
+        const savedTheme = localStorage.getItem('theme');
+        let isDark = savedTheme ? (savedTheme === 'dark') : darkModeMediaQuery.matches;
+
+        if (isDark) {
+            htmlElement.setAttribute('data-theme', 'dark');
+            // ▼ ダークモード時の背景画像ファイル名を指定
+            bgLayer.style.backgroundImage = "url('bg-dark.jpg')";
+        } else {
+            htmlElement.removeAttribute('data-theme');
+            // ▼ ライトモード時の背景画像ファイル名を指定
+            bgLayer.style.backgroundImage = "url('bg-light.jpg')";
+        }
+    }
+
+    toggleBtn.addEventListener('click', () => {
+        const currentTheme = htmlElement.getAttribute('data-theme');
+        localStorage.setItem('theme', currentTheme === 'dark' ? 'light' : 'dark');
         applyTheme();
+    });
+
+    darkModeMediaQuery.addEventListener('change', () => {
+        if (!localStorage.getItem('theme')) applyTheme();
+    });
+
+    // ---------- 起動 ----------
+    (async function init() {
+        applyTheme();
+        render();                       // まず仮データで表示
+        if (!sb) return;
+        const { data } = await sb.auth.getSession();
+        session = data.session;
+        await checkAdmin();
+        await loadData();
+        render();
+        sb.auth.onAuthStateChange((event, s) => {
+            setTimeout(async () => { session = s; await checkAdmin(); render(); }, 0);
+        });
+    })();
     </script>
 </body>
 </html>
