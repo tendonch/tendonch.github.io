@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>質問受付 - Ghost Club</title>
+    <meta name="color-scheme" content="light dark">
+    <meta name="darkreader-lock">
+    <link rel="stylesheet" href="style.css?v=5">
+    <script>
+        // 画面が描画される前にライト/ダークを決める（背景画像のちらつき・表示漏れ防止）
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                var dark = t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+
+    <div class="bg-image-layer" id="bgLayer"></div>
+
+    <!-- お知らせバー（全ページ共通） -->
+    <div id="announceArea"></div>
+
+    <div class="container">
+        <nav id="siteNav" class="site-nav"></nav>
+        <h1>Ghost Club</h1>
+        <p class="site-desc">質問受付</p>
+
+        <div class="section">
+            <div class="section-title">質問を送る</div>
+            <div class="member-box q-form">
+                <label for="qName">お名前（任意・ニックネームOK）</label>
+                <input type="text" id="qName" maxlength="30" placeholder="匿名">
+                <label for="qMsg">質問の内容（500文字まで）</label>
+                <textarea id="qMsg" maxlength="500" placeholder="企画やゲームのことなど、気軽にどうぞ"></textarea>
+                <input type="text" id="qWebsite" class="q-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+                <button class="send" id="qSend" type="button">送信する</button>
+                <p class="q-status" id="qStatus"></p>
+                <div class="hint" style="font-size:11px;color:var(--sub-text)">いただいた質問は、回答とあわせて下の一覧に載ることがあります。個人情報は書かないでください。</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">みんなの質問と回答</div>
+            <div id="qaArea"></div>
+        </div>
+
+        <div class="footer-toggle">
+            <button class="mode-toggle" id="modeToggleBtn">モードを切り替える</button>
+            <div class="admin-area" id="adminArea"></div>
+        </div>
+
+    </div>
+
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+    <script src="site.js?v=5"></script>
+    <script>
+
+    const Q_MAX = 500;
+    state.questions = [];
+
+    Object.assign(FORMS, {
+        question: {
+            table: 'questions', listKey: 'questions', title: '質問',
+            fields: [
+                { k: 'message', label: '質問', type: 'textarea', required: true },
+                { k: 'answer', label: '回答', type: 'textarea' },
+                { k: 'published', label: '公開する（回答と一緒にサイトに表示）', type: 'checkbox' }
+            ]
+        }
+    });
+
+    async function loadPageData() {
+        if (!sb) return;
+        const q = await sb.from('questions').select('*').order('created_at', { ascending: false }).limit(100);
+        if (q.error) { console.warn('質問を取得できません（SQLを実行済みか確認してください）', q.error.message); state.questions = []; return; }
+        state.questions = q.data;
+    }
+
+    function renderPage() {
+        const list = state.questions.filter(q => editMode || q.published);
+        const box = $('#qaArea');
+        if (!list.length) {
+            box.innerHTML = '<div class="member-box">まだ公開されている質問はありません。</div>';
+            return;
+        }
+        box.innerHTML = '<div class="member-grid">' + list.map(q => {
+            const date = q.created_at ? new Date(q.created_at).toLocaleDateString('ja-JP') : '';
+            const tags = (q.published ? '' : '<span class="tag">非公開</span>') + (q.answer ? '' : '<span class="tag">未回答</span>');
+            return `<div class="member-card"><div class="member-main"><div class="member-info">
+                <div class="qa-q">Q. ${esc(q.message)}</div>
+                <div class="qa-meta">${esc(q.name || '匿名')} ・ ${esc(date)}${tags}</div>
+                ${q.answer ? `<div class="qa-a">${esc(q.answer)}</div>` : ''}
+            </div></div>${adminBtns('question', q.id)}</div>`;
+        }).join('') + '</div>';
+    }
+
+    $('#qSend').onclick = async () => {
+        const st = $('#qStatus'), btn = $('#qSend');
+        const say = (t, ok) => { st.textContent = t; st.style.color = ok ? '#22c55e' : '#ef4444'; };
+        if ($('#qWebsite').value) return;                       // ボット対策（人間には見えない欄）
+        if (!sb) return say('現在、質問を送信できません。', false);
+        const name = $('#qName').value.trim().slice(0, 30);
+        const message = $('#qMsg').value.trim();
+        if (!message) return say('質問の内容を入力してください。', false);
+        if (message.length > Q_MAX) return say(`質問は${Q_MAX}文字以内にしてください。`, false);
+        let last = 0;
+        try { last = Number(localStorage.getItem('qLast') || 0); } catch (e) {}
+        if (Date.now() - last < 60000) return say('続けて送信するときは、1分ほど空けてください。', false);
+        btn.disabled = true;
+        const { error } = await sb.from('questions').insert({ name: name || null, message });
+        btn.disabled = false;
+        if (error) return say('送信できませんでした。時間をおいてもう一度お試しください。', false);
+        try { localStorage.setItem('qLast', String(Date.now())); } catch (e) {}
+        $('#qMsg').value = '';
+        say('送信しました。ありがとうございます！', true);
+    };
+
+    startSite();
+
+    </script>
+</body>
+</html>

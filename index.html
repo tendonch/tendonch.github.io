@@ -4,366 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ghost Club - 公式ポータルサイト</title>
-    <link rel="icon" type="image/png" href="./favicon.png?v=2">
-    <style>
-        :root {
-            --bg-color: #f4f4f9;
-            --card-bg: rgba(255, 255, 255, 0.9);
-            --card-hover: rgba(240, 240, 245, 0.95);
-            --text-color: #222222;
-            --sub-text: #555555;
-            --accent-group: #3b82f6;
-            --accent-tendon: #ff7700;
-            --accent-petra: #ff4757;
-            --hover-orange: #ff8800;
-        }
-
-        [data-theme="dark"] {
-            --bg-color: #121212;
-            --card-bg: rgba(30, 30, 30, 0.85);
-            --card-hover: rgba(44, 44, 44, 0.9);
-            --text-color: #f0f2f5;
-            --sub-text: #cccccc;
-            --accent-group: #3b82f6;
-            --accent-tendon: #ff8800;
-            --accent-petra: #ff4757;
-        }
-
-        body {
-            font-family: sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 40px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            box-sizing: border-box;
-            transition: background-color 0.3s, color 0.3s;
-            position: relative;
-        }
-
-        .bg-image-layer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            background-size: cover;
-            background-position: center;
-            transition: background-image 0.4s ease-in-out;
-        }
-
-        .container {
-            max-width: 650px;
-            width: 100%;
-            z-index: 1;
-        }
-
-        h1 {
-            text-align: center;
-            margin-bottom: 5px;
-            font-size: 32px;
-            letter-spacing: 1px;
-            color: #ffffff;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
-        }
-
-        p.site-desc {
-            text-align: center;
-            color: #f0f0f0;
-            margin-bottom: 30px;
-            font-size: 15px;
-            font-weight: bold;
-            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
-        }
-
-        .section {
-            margin-bottom: 35px;
-        }
-
-        .section-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            border-left: 4px solid var(--accent-group);
-            padding-left: 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: #ffffff;
-            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
-        }
-
-        .channel-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid rgba(255, 255, 255, 0.9);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-            flex-shrink: 0;
-        }
-
-        .sub-section-title {
-            font-size: 15px;
-            font-weight: bold;
-            margin: 20px 0 10px 0;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: #ffffff;
-            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
-        }
-
-        .group-main-card {
-            background: linear-gradient(135deg, #1e3a8a, #3b82f6);
-            padding: 25px;
-            border-radius: 12px;
-            text-decoration: none;
-            color: white;
-            display: block;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-            transition: transform 0.2s, background 0.2s;
-        }
-
-        .group-main-card:hover {
-            transform: translateY(-3px);
-            background: linear-gradient(135deg, #172554, #1d4ed8) !important;
-        }
-
-        .group-main-card h2 {
-            margin: 0 0 8px 0;
-            font-size: 20px;
-        }
-
-        .group-main-card p {
-            margin: 0;
-            font-size: 13px;
-            opacity: 0.9;
-        }
-
-        .member-box {
-            background-color: var(--card-bg);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            border-radius: 12px;
-            color: var(--text-color);
-            font-size: 14px;
-            line-height: 1.6;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
-
-        .video-container {
-            position: relative;
-            width: 100%;
-            padding-bottom: 56.25%;
-            height: 0;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-            margin-bottom: 20px;
-            background: #000;
-        }
-
-        .video-container iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: 0;
-        }
-
-
-        .video-fallback {
-            display: block;
-            text-align: right;
-            margin: -10px 0 20px 0;
-            font-size: 12px;
-            color: #ffffff;
-            text-decoration: none;
-            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
-            opacity: 0.85;
-        }
-        .video-fallback:hover { opacity: 1; text-decoration: underline; }
-
-        .card-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .card {
-            background-color: var(--card-bg);
-            backdrop-filter: blur(10px);
-            padding: 18px 20px;
-            border-radius: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            text-decoration: none;
-            color: var(--text-color);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            transition: transform 0.2s, background-color 0.2s;
-        }
-
-        .card:hover {
-            transform: translateY(-3px);
-            background-color: var(--card-hover);
-        }
-
-        .card-info .card-title {
-            font-weight: bold;
-            font-size: 15px;
-            margin-bottom: 3px;
-        }
-
-        .card-info .card-sub {
-            font-size: 12px;
-            color: var(--sub-text);
-        }
-
-        .btn {
-            color: white;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: bold;
-            transition: opacity 0.2s;
-        }
-        .btn:hover {
-            opacity: 0.85;
-        }
-
-        .btn-tendon {
-            background-color: var(--accent-tendon);
-        }
-
-        .btn-petra {
-            background-color: var(--accent-petra);
-        }
-
-        .footer-toggle {
-            text-align: center;
-            margin-top: 40px;
-        }
-
-        .mode-toggle {
-            background: var(--card-bg);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            color: var(--text-color);
-            padding: 10px 22px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            transition: 0.2s;
-        }
-        .mode-toggle:hover {
-            background-color: var(--hover-orange);
-            border-color: var(--hover-orange);
-            color: #ffffff;
-        }
-
-        /* ===== 追加: メンバーカード ===== */
-        .member-grid { display: flex; flex-direction: column; gap: 12px; }
-        .member-card {
-            background-color: var(--card-bg);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding-right: 12px;
-            transition: transform 0.2s, background-color 0.2s;
-        }
-        .member-card:hover { background-color: var(--card-hover); }
-        .member-main {
-            flex: 1;
-            min-width: 0;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 16px 20px;
-            color: var(--text-color);
-            text-decoration: none;
-        }
-        a.member-main:hover { transform: translateY(-1px); }
-        .member-avatar {
-            width: 52px; height: 52px; border-radius: 50%;
-            object-fit: cover; flex-shrink: 0;
-            border: 2px solid rgba(255,255,255,0.9);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-        }
-        .member-avatar.ph {
-            display: flex; align-items: center; justify-content: center;
-            background: var(--accent-group); color: #fff; font-weight: bold; font-size: 20px;
-        }
-        .member-name { font-weight: bold; font-size: 15px; }
-        .member-role { font-size: 12px; color: var(--sub-text); margin-top: 2px; }
-        .member-intro { font-size: 13px; line-height: 1.6; margin-top: 6px; white-space: pre-wrap; }
-
-        /* ===== 追加: 管理者UI ===== */
-        .title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-        .title-row .section-title { flex: 1; }
-        .edit-btns { display: inline-flex; gap: 6px; flex-shrink: 0; }
-        .mini-btn {
-            background: rgba(255,255,255,0.92); color: #222; border: 0;
-            padding: 5px 11px; border-radius: 14px; font-size: 12px; font-weight: bold; cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-        }
-        .mini-btn:hover { background: var(--hover-orange); color: #fff; }
-        .mini-btn.danger:hover { background: #dc2626; }
-        .mini-btn.add { margin-bottom: 12px; }
-        .mini-btn.big { width: 100%; padding: 12px; font-size: 14px; border-radius: 12px; margin: 0; }
-        .section-title .edit-btns { margin-left: auto; }
-        .admin-area { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 14px; }
-        .admin-area .mode-toggle.active { background-color: var(--hover-orange); color: #fff; border-color: var(--hover-orange); }
-        .admin-note { width: 100%; text-align: center; font-size: 12px; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.6); margin: 4px 0 0; }
-
-        .modal-bg {
-            position: fixed; inset: 0; z-index: 100;
-            background: rgba(0,0,0,0.6);
-            display: flex; align-items: center; justify-content: center; padding: 16px;
-        }
-        .modal {
-            background: var(--bg-color); color: var(--text-color);
-            width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
-            border-radius: 14px; padding: 22px; box-sizing: border-box;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
-        }
-        .modal h3 { margin: 0 0 16px 0; font-size: 17px; }
-        .modal label { display: block; font-size: 12px; font-weight: bold; margin: 12px 0 4px; color: var(--sub-text); }
-        .modal input[type=text], .modal input[type=number], .modal textarea {
-            width: 100%; box-sizing: border-box; padding: 9px 10px; font-size: 14px;
-            border-radius: 8px; border: 1px solid rgba(128,128,128,0.5);
-            background: var(--card-bg); color: var(--text-color); font-family: inherit;
-        }
-        .modal textarea { min-height: 80px; resize: vertical; }
-        .modal input[type=color] { width: 60px; height: 34px; padding: 0; border: 0; background: none; }
-        .modal .hint { font-size: 11px; color: var(--sub-text); margin-top: 3px; }
-        .modal .error { color: #ef4444; font-size: 13px; margin: 12px 0 0; min-height: 1em; }
-        .modal .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
-        .modal .actions button {
-            padding: 9px 18px; border-radius: 18px; border: 0; font-weight: bold; cursor: pointer; font-size: 14px;
-        }
-        .modal .actions .cancel { background: rgba(128,128,128,0.3); color: var(--text-color); }
-        .modal .actions .save { background: var(--accent-group); color: #fff; }
-        .modal .actions button:disabled { opacity: 0.6; cursor: wait; }
-    </style>
+    <meta name="color-scheme" content="light dark">
+    <meta name="darkreader-lock">
+    <link rel="stylesheet" href="style.css?v=5">
+    <script>
+        // 画面が描画される前にライト/ダークを決める（背景画像のちらつき・表示漏れ防止）
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                var dark = t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+            } catch (e) {}
+        })();
+    </script>
 </head>
 <body>
 
     <div class="bg-image-layer" id="bgLayer"></div>
 
+    <!-- お知らせバー（データベースから表示） -->
+    <div id="announceArea"></div>
+
     <div class="container">
+        <nav id="siteNav" class="site-nav"></nav>
         <h1>Ghost Club</h1>
         <p class="site-desc">公式ポータルサイト</p>
 
@@ -412,12 +75,8 @@
 
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+    <script src="site.js?v=5"></script>
     <script>
-    // ============================================================
-    //  設定は config.js に分けてあります（index.html を差し替えても消えません）
-    // ============================================================
-    const { SUPABASE_URL = '', SUPABASE_ANON_KEY = '' } = window.SITE_CONFIG || {};
-
     // データベースに接続できないとき・未設定のときに表示する内容
     const FALLBACK_MEMBERS = [];
     const FALLBACK_CHANNELS = [
@@ -441,56 +100,18 @@
         }
     ];
 
-    // ---------- 共通ヘルパー ----------
-    const $ = (s, r = document) => r.querySelector(s);
-    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-    const safeUrl = u => { try { const x = new URL(u); return /^https?:$/.test(x.protocol) ? x.href : '#'; } catch { return '#'; } };
-    const safeIcon = u => {
-        if (!u) return '';
-        if (/^(https?:)?\/\//.test(u)) return safeUrl(u.startsWith('//') ? 'https:' + u : u);
-        return /^[\w\-./%]+$/.test(u) ? u : '';
-    };
-    const validChId = id => /^UC[\w-]{22}$/.test(id || '');
+    state.members = FALLBACK_MEMBERS;
+    state.channels = FALLBACK_CHANNELS;
 
-    // ---------- Supabase ----------
-    const sb = (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase)
-        ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
-
-    let state = { members: FALLBACK_MEMBERS, channels: FALLBACK_CHANNELS };
-    let session = null, isAdmin = false, editMode = false, adminDebug = '';
-
-    async function loadData() {
+    async function loadPageData() {
         if (!sb) return;
         const [m, c] = await Promise.all([
             sb.from('members').select('*').order('sort_order').order('created_at'),
             sb.from('channels').select('*').order('sort_order').order('created_at')
         ]);
         if (m.error || c.error) { console.error('データ取得エラー', m.error || c.error); return; }
-        state = { members: m.data, channels: c.data };
-    }
-
-    async function checkAdmin() {
-        isAdmin = false;
-        adminDebug = '';
-        if (sb && session) {
-            const { data, error } = await sb.rpc('is_admin');
-            isAdmin = !error && data === true;
-            if (!isAdmin) {
-                const ids = (session.user.identities || [])
-                    .map(i => `${i.provider}:${(i.identity_data && (i.identity_data.provider_id || i.identity_data.sub)) || '?'}`).join(', ');
-                adminDebug = (error ? `エラー: ${error.message} / ` : '') + `ログイン中のID → ${ids}`;
-            }
-        }
-        if (!isAdmin) editMode = false;
-    }
-
-    // ---------- 描画 ----------
-    function adminBtns(kind, id) {
-        if (!editMode) return '';
-        return `<span class="edit-btns">
-            <button class="mini-btn" data-act="edit" data-kind="${kind}" data-id="${esc(id)}">編集</button>
-            <button class="mini-btn danger" data-act="delete" data-kind="${kind}" data-id="${esc(id)}">削除</button>
-        </span>`;
+        state.members = m.data;
+        state.channels = c.data;
     }
 
     function renderMembers() {
@@ -554,29 +175,14 @@
         }).join('');
         const add = editMode
             ? '<div class="section"><button class="mini-btn add big" data-act="add" data-kind="channel">＋ 個人チャンネルを追加</button></div>' : '';
-        $('#channelArea').innerHTML = html + add;
+        setHtml($('#channelArea'), html + add);
     }
 
-    function renderAdminArea() {
-        const el = $('#adminArea');
-        if (!sb) { el.innerHTML = ''; return; }
-        let h = '';
-        if (!session) {
-            h = '<button class="mode-toggle" data-act="login">管理者ログイン（Discord）</button>';
-        } else {
-            if (isAdmin) h += `<button class="mode-toggle ${editMode ? 'active' : ''}" data-act="toggleEdit">${editMode ? '編集モードを終了' : '編集モード'}</button>`;
-            h += '<button class="mode-toggle" data-act="logout">ログアウト</button>';
-            if (!isAdmin) h += `<p class="admin-note">このDiscordアカウントには管理権限がありません。<br>${esc(adminDebug)}</p>`;
-        }
-        el.innerHTML = h;
-    }
+    function renderPage() { renderMembers(); renderChannels(); }
 
-    function render() { renderMembers(); renderChannels(); renderAdminArea(); }
-
-    // ---------- 編集フォーム ----------
-    const FORMS = {
+    Object.assign(FORMS, {
         member: {
-            table: 'members', title: 'メンバー',
+            table: 'members', listKey: 'members', title: 'メンバー',
             fields: [
                 { k: 'name', label: '名前', type: 'text', required: true },
                 { k: 'role', label: '肩書き・ひとこと（任意）', type: 'text' },
@@ -587,7 +193,7 @@
             ]
         },
         channel: {
-            table: 'channels', title: '個人チャンネル',
+            table: 'channels', listKey: 'channels', title: '個人チャンネル',
             fields: [
                 { k: 'name', label: '表示名（「(個人チャンネル)」は自動で付きます）', type: 'text', required: true },
                 { k: 'color', label: 'テーマカラー', type: 'color' },
@@ -597,7 +203,8 @@
                 { k: 'sort_order', label: '表示順（小さいほど上）', type: 'number' }
             ]
         }
-    };
+    });
+
 
     function linksToText(links) {
         return (Array.isArray(links) ? links : []).map(l => `${l.label || ''} | ${l.handle || ''} | ${l.url || ''}`).join('\n');
@@ -608,151 +215,7 @@
             .map(p => ({ label: p[0], handle: p[1], url: p.slice(2).join('|') }));
     }
 
-    async function uploadIcon(file) {
-        if (!file.type.startsWith('image/')) throw new Error('画像ファイルを選んでください');
-        if (file.size > 2 * 1024 * 1024) throw new Error('画像は2MB以下にしてください');
-        const ext = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
-        const path = `${crypto.randomUUID()}.${ext}`;
-        const { error } = await sb.storage.from('icons').upload(path, file, { contentType: file.type });
-        if (error) throw error;
-        return sb.storage.from('icons').getPublicUrl(path).data.publicUrl;
-    }
-
-    function openForm(kind, row) {
-        const def = FORMS[kind];
-        const values = row ? { ...row } : { color: '#3b82f6', sort_order: 0 };
-        if (kind === 'channel') values.links = linksToText(values.links);
-
-        const bg = document.createElement('div');
-        bg.className = 'modal-bg';
-        const fieldsHtml = def.fields.map(f => {
-            const v = values[f.k] ?? '';
-            let input;
-            if (f.type === 'textarea') input = `<textarea data-k="${f.k}">${esc(v)}</textarea>`;
-            else if (f.type === 'image') input = `<input type="text" data-k="${f.k}" value="${esc(v)}" placeholder="画像のURL（またはファイルを選択）"><input type="file" accept="image/*" data-file="${f.k}" style="margin-top:6px">`;
-            else input = `<input type="${f.type}" data-k="${f.k}" value="${esc(v)}">`;
-            return `<label>${esc(f.label)}</label>${input}${f.hint ? `<div class="hint">${esc(f.hint)}</div>` : ''}`;
-        }).join('');
-        bg.innerHTML = `<div class="modal"><h3>${esc(def.title)}を${row ? '編集' : '追加'}</h3>${fieldsHtml}
-            <p class="error"></p>
-            <div class="actions"><button class="cancel" type="button">キャンセル</button><button class="save" type="button">保存</button></div></div>`;
-        document.body.appendChild(bg);
-
-        const close = () => bg.remove();
-        $('.cancel', bg).onclick = close;
-        bg.addEventListener('mousedown', e => { if (e.target === bg) close(); });
-
-        $('.save', bg).onclick = async () => {
-            const btn = $('.save', bg), err = $('.error', bg);
-            err.textContent = '';
-            btn.disabled = true;
-            try {
-                const payload = {};
-                for (const f of def.fields) {
-                    const el = $(`[data-k="${f.k}"]`, bg);
-                    let v = el.value.trim();
-                    if (f.type === 'image') {
-                        const file = $(`[data-file="${f.k}"]`, bg).files[0];
-                        if (file) v = await uploadIcon(file);
-                    }
-                    if (f.required && !v) throw new Error(`${f.label.split('（')[0]}を入力してください`);
-                    if (f.type === 'number') v = Number(v) || 0;
-                    else if (f.k === 'links') v = textToLinks(v);
-                    else if (v === '') v = null;
-                    payload[f.k] = v;
-                }
-                if (kind === 'channel') {
-                    if (payload.youtube_channel_id && !validChId(payload.youtube_channel_id)) throw new Error('YouTubeチャンネルIDは「UC」で始まる24文字です');
-                    if (!payload.color) payload.color = '#3b82f6';
-                }
-                const q = row ? sb.from(def.table).update(payload).eq('id', row.id) : sb.from(def.table).insert(payload);
-                const { data, error } = await q.select();
-                if (error) throw error;
-                if (!data || !data.length) throw new Error('保存できませんでした（管理権限を確認してください）');
-                await loadData();
-                render();
-                close();
-            } catch (e) {
-                err.textContent = e.message || String(e);
-                btn.disabled = false;
-            }
-        };
-    }
-
-    async function deleteRow(kind, id) {
-        const def = FORMS[kind];
-        if (!confirm(`この${def.title}を削除しますか？`)) return;
-        const { data, error } = await sb.from(def.table).delete().eq('id', id).select();
-        if (error || !data || !data.length) { alert('削除できませんでした: ' + (error ? error.message : '権限がありません')); return; }
-        await loadData();
-        render();
-    }
-
-    document.addEventListener('click', async e => {
-        const b = e.target.closest('[data-act]');
-        if (!b) return;
-        const { act, kind, id } = b.dataset;
-        if (act === 'login') {
-            await sb.auth.signInWithOAuth({ provider: 'discord', options: { redirectTo: location.origin + location.pathname } });
-        } else if (act === 'logout') {
-            await sb.auth.signOut();
-        } else if (act === 'toggleEdit') {
-            editMode = !editMode; render();
-        } else if (act === 'add') {
-            openForm(kind, null);
-        } else if (act === 'edit') {
-            const list = kind === 'member' ? state.members : state.channels;
-            openForm(kind, list.find(r => String(r.id) === id));
-        } else if (act === 'delete') {
-            deleteRow(kind, id);
-        }
-    });
-
-    // ---------- テーマ（ライト/ダーク） ----------
-    const htmlElement = document.documentElement;
-    const toggleBtn = document.getElementById('modeToggleBtn');
-    const bgLayer = document.getElementById('bgLayer');
-    const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-    function applyTheme() {
-        const savedTheme = localStorage.getItem('theme');
-        let isDark = savedTheme ? (savedTheme === 'dark') : darkModeMediaQuery.matches;
-
-        if (isDark) {
-            htmlElement.setAttribute('data-theme', 'dark');
-            // ▼ ダークモード時の背景画像ファイル名を指定
-            bgLayer.style.backgroundImage = "url('bg-dark.jpg')";
-        } else {
-            htmlElement.removeAttribute('data-theme');
-            // ▼ ライトモード時の背景画像ファイル名を指定
-            bgLayer.style.backgroundImage = "url('bg-light.jpg')";
-        }
-    }
-
-    toggleBtn.addEventListener('click', () => {
-        const currentTheme = htmlElement.getAttribute('data-theme');
-        localStorage.setItem('theme', currentTheme === 'dark' ? 'light' : 'dark');
-        applyTheme();
-    });
-
-    darkModeMediaQuery.addEventListener('change', () => {
-        if (!localStorage.getItem('theme')) applyTheme();
-    });
-
-    // ---------- 起動 ----------
-    (async function init() {
-        applyTheme();
-        render();                       // まず仮データで表示
-        if (!sb) return;
-        const { data } = await sb.auth.getSession();
-        session = data.session;
-        await checkAdmin();
-        await loadData();
-        render();
-        sb.auth.onAuthStateChange((event, s) => {
-            setTimeout(async () => { session = s; await checkAdmin(); render(); }, 0);
-        });
-    })();
+    startSite();
     </script>
 </body>
 </html>

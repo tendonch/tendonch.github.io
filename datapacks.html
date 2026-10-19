@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>データパック配布 - Ghost Club</title>
+    <meta name="color-scheme" content="light dark">
+    <meta name="darkreader-lock">
+    <link rel="stylesheet" href="style.css?v=5">
+    <script>
+        // 画面が描画される前にライト/ダークを決める（背景画像のちらつき・表示漏れ防止）
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                var dark = t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+
+    <div class="bg-image-layer" id="bgLayer"></div>
+
+    <!-- お知らせバー（全ページ共通） -->
+    <div id="announceArea"></div>
+
+    <div class="container">
+        <nav id="siteNav" class="site-nav"></nav>
+        <h1>Ghost Club</h1>
+        <p class="site-desc">データパック配布</p>
+
+        <div class="section">
+            <div class="section-title">企画で使ったデータパック</div>
+            <div id="dpArea"></div>
+        </div>
+
+        <div class="footer-toggle">
+            <button class="mode-toggle" id="modeToggleBtn">モードを切り替える</button>
+            <div class="admin-area" id="adminArea"></div>
+        </div>
+
+    </div>
+
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+    <script src="site.js?v=5"></script>
+    <script>
+
+    state.datapacks = [];
+
+    Object.assign(FORMS, {
+        datapack: {
+            table: 'datapacks', listKey: 'datapacks', title: 'データパック',
+            fields: [
+                { k: 'title', label: '名前', type: 'text', required: true },
+                { k: 'description', label: '説明（どの企画で使ったか・導入方法など）', type: 'textarea' },
+                { k: 'mc_version', label: '対応バージョン（例: 1.21.x）', type: 'text' },
+                { k: 'download_url', label: 'ダウンロード', type: 'file', required: true, hint: 'ファイルは50MBまで。大きいものはGoogleドライブ等のURLを入力してください' },
+                { k: 'icon_url', label: '画像（任意）', type: 'image' },
+                { k: 'sort_order', label: '表示順（小さいほど上）', type: 'number' }
+            ]
+        }
+    });
+
+    async function loadPageData() {
+        if (!sb) return;
+        const d = await sb.from('datapacks').select('*').order('sort_order').order('created_at', { ascending: false });
+        if (d.error) { console.warn('データパックを取得できません（SQLを実行済みか確認してください）', d.error.message); state.datapacks = []; return; }
+        state.datapacks = d.data;
+    }
+
+    function renderPage() {
+        const box = $('#dpArea');
+        const add = editMode ? '<button class="mini-btn add big" data-act="add" data-kind="datapack">＋ データパックを追加</button>' : '';
+        if (!state.datapacks.length) {
+            box.innerHTML = '<div class="member-box">まだ配布しているデータパックはありません。</div>' + add;
+            return;
+        }
+        box.innerHTML = '<div class="member-grid">' + state.datapacks.map(d => {
+            const icon = safeIcon(d.icon_url);
+            const avatar = icon ? `<img class="member-avatar" src="${esc(icon)}" alt="">` : '';
+            return `<div class="member-card"><div class="member-main">${avatar}<div class="member-info">
+                <div class="member-name">${esc(d.title)}${d.mc_version ? `<span class="dp-ver">${esc(d.mc_version)}</span>` : ''}</div>
+                ${d.description ? `<div class="member-intro">${esc(d.description)}</div>` : ''}
+            </div><a class="dl-btn" href="${esc(safeUrl(d.download_url))}" target="_blank" rel="noopener" download>ダウンロード</a></div>${adminBtns('datapack', d.id)}</div>`;
+        }).join('') + '</div><div style="margin-top:12px">' + add + '</div>';
+    }
+
+    startSite();
+
+    </script>
+</body>
+</html>
