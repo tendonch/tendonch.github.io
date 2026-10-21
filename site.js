@@ -41,18 +41,19 @@
         renderAll();
     }
 
-    const NAV = [['index.html', 'トップ'], ['questions.html', '質問受付'], ['datapacks.html', 'データパック配布']];
+    const NAV = [['./', 'トップ', 'index.html'], ['questions.html', '質問受付', 'questions.html'], ['datapacks.html', 'データパック等', 'datapacks.html']];
     function renderNav() {
         const el = $('#siteNav');
         if (!el) return;
         const cur = location.pathname.split('/').pop() || 'index.html';
-        el.innerHTML = NAV.map(([href, label]) => `<a href="${href}" class="${href === cur ? 'active' : ''}">${label}</a>`).join('');
+        el.innerHTML = NAV.map(([href, label, file]) => `<a href="${href}" class="${file === cur ? 'active' : ''}">${label}</a>`).join('');
     }
 
     function renderAll() {
         renderAnnounce();
         renderNav();
-        renderAdminArea();
+        const sb_ = $('#settingsBtn');
+        if (sb_) sb_.className = 'settings-btn' + (editMode ? ' editing' : '');
         if (typeof renderPage === 'function') renderPage();
     }
 
@@ -79,20 +80,6 @@
         </span>`;
     }
 
-    function renderAdminArea() {
-        const el = $('#adminArea');
-        if (!sb) { el.innerHTML = ''; return; }
-        let h = '';
-        if (!session) {
-            h = '<button class="mode-toggle" data-act="login">管理者ログイン（Discord）</button>';
-        } else {
-            if (isAdmin) h += `<button class="mode-toggle ${editMode ? 'active' : ''}" data-act="toggleEdit">${editMode ? '編集モードを終了' : '編集モード'}</button>`;
-            h += '<button class="mode-toggle" data-act="logout">ログアウト</button>';
-            if (!isAdmin) h += `<p class="admin-note">このDiscordアカウントには管理権限がありません。<br>${esc(adminDebug)}</p>`;
-        }
-        el.innerHTML = h;
-    }
-
     function renderAnnounce() {
         const el = $('#announceArea');
         const list = state.announcements.filter(a => editMode || a.active);
@@ -112,7 +99,7 @@
 
     // ---------- 編集フォーム ----------
     FORMS.announcement = {
-        table: 'announcements', listKey: 'announcements', title: 'お知らせ',
+        table: 'announcements', listKey: 'announcements', defaults: { active: true }, title: 'お知らせ',
         fields: [
             { k: 'message', label: 'お知らせの内容', type: 'textarea', required: true },
             { k: 'link_url', label: 'リンクURL（任意・押したときの移動先）', type: 'text' },
@@ -137,16 +124,22 @@
 
     function openForm(kind, row) {
         const def = FORMS[kind];
-        const values = row ? { ...row } : (kind === 'announcement' ? { active: true } : { color: '#3b82f6', sort_order: 0 });
-        if (kind === 'channel') values.links = linksToText(values.links);
+        const values = row ? { ...row } : (def.defaults ? { ...def.defaults } : { color: '#3b82f6', sort_order: 0 });
 
         const bg = document.createElement('div');
         bg.className = 'modal-bg';
         const fieldsHtml = def.fields.map(f => {
-            const v = values[f.k] ?? '';
+            const raw = values[f.k];
+            const v = f.toText ? f.toText(raw) : (raw ?? '');
             if (f.type === 'checkbox') return `<label style="display:flex;align-items:center;gap:8px;color:var(--text-color);font-size:14px;margin-top:14px"><input type="checkbox" data-k="${f.k}" ${v ? 'checked' : ''}> ${esc(f.label)}</label>`;
+            if (f.type === 'checks') {
+                const cur = Array.isArray(raw) ? raw : [];
+                return `<label>${esc(f.label)}</label><div data-k="${f.k}" data-checks="1">` + f.options.map(([val, lab]) =>
+                    `<label style="display:inline-flex;align-items:center;gap:6px;margin:4px 14px 0 0;color:var(--text-color);font-size:14px"><input type="checkbox" value="${esc(val)}" ${cur.includes(val) ? 'checked' : ''}> ${esc(lab)}</label>`).join('') + '</div>';
+            }
             let input;
-            if (f.type === 'textarea') input = `<textarea data-k="${f.k}">${esc(v)}</textarea>`;
+            if (f.type === 'select') input = `<select data-k="${f.k}">` + f.options.map(([val, lab]) => `<option value="${esc(val)}" ${val === raw ? 'selected' : ''}>${esc(lab)}</option>`).join('') + '</select>';
+            else if (f.type === 'textarea' || f.type === 'lines' || f.type === 'files') input = `<textarea data-k="${f.k}">${esc(v)}</textarea>` + (f.type === 'files' ? `<input type="file" multiple data-files="${f.k}" style="margin-top:6px">` : '');
             else if (f.type === 'image' || f.type === 'file') input = `<input type="text" data-k="${f.k}" value="${esc(v)}" placeholder="${f.type === 'image' ? '画像のURL' : 'ダウンロードURL'}（またはファイルを選択）"><input type="file" ${f.type === 'image' ? 'accept="image/*"' : ''} data-file="${f.k}" style="margin-top:6px">`;
             else input = `<input type="${f.type}" data-k="${f.k}" value="${esc(v)}">`;
             return `<label>${esc(f.label)}</label>${input}${f.hint ? `<div class="hint">${esc(f.hint)}</div>` : ''}`;
@@ -168,6 +161,22 @@
                 const payload = {};
                 for (const f of def.fields) {
                     const el = $(`[data-k="${f.k}"]`, bg);
+                    if (f.type === 'checks') {
+                        payload[f.k] = [...el.querySelectorAll('input:checked')].map(i => i.value);
+                        if (f.required && !payload[f.k].length) throw new Error(`${f.label.split('（')[0]}を選んでください`);
+                        continue;
+                    }
+                    if (f.type === 'lines' || f.type === 'files') {
+                        const arr = f.fromText(el.value);
+                        if (f.type === 'files') {
+                            for (const file of $(`[data-files="${f.k}"]`, bg).files) {
+                                arr.push({ name: file.name, url: await uploadFile(file, 'files', false) });
+                            }
+                        }
+                        if (f.required && !arr.length) throw new Error(`${f.label.split('（')[0]}を入力してください`);
+                        payload[f.k] = arr;
+                        continue;
+                    }
                     let v = f.type === 'checkbox' ? el.checked : el.value.trim();
                     if (f.type === 'image' || f.type === 'file') {
                         const file = $(`[data-file="${f.k}"]`, bg).files[0];
@@ -175,7 +184,6 @@
                     }
                     if (f.required && !v) throw new Error(`${f.label.split('（')[0]}を入力してください`);
                     if (f.type === 'number') v = Number(v) || 0;
-                    else if (f.k === 'links') v = textToLinks(v);
                     else if (v === '') v = null;
                     payload[f.k] = v;
                 }
@@ -246,25 +254,186 @@
         else htmlElement.removeAttribute('data-theme');
     }
 
-    toggleBtn.addEventListener('click', () => {
-        try { localStorage.setItem('theme', isDarkNow() ? 'light' : 'dark'); } catch (e) {}
-        applyTheme();
-    });
-
     // 別のタブで切り替えたとき・「戻る」で戻ってきたとき・OS設定が変わったときも合わせる
     window.addEventListener('storage', e => { if (e.key === 'theme') applyTheme(); });
     window.addEventListener('pageshow', applyTheme);
     darkModeMediaQuery.addEventListener('change', () => { if (!savedTheme()) applyTheme(); });
 
+    // ---------- 設定（右上の歯車） ----------
+    const GEAR = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+
+    function initSettingsButton() {
+        if ($('#settingsBtn')) return;
+        const b = document.createElement('button');
+        b.id = 'settingsBtn';
+        b.className = 'settings-btn';
+        b.type = 'button';
+        b.setAttribute('aria-label', '設定');
+        b.innerHTML = GEAR;
+        b.onclick = openSettings;
+        document.body.appendChild(b);
+    }
+
+    function openSettings() {
+        const bg = document.createElement('div');
+        bg.className = 'modal-bg';
+        const cur = savedTheme() || 'system';
+        const radios = [['system', 'システムに合わせる'], ['dark', 'ダークモード'], ['light', 'ライトモード']].map(([v, l]) =>
+            `<label class="set-radio"><input type="radio" name="themeMode" value="${v}" ${cur === v ? 'checked' : ''}> ${l}</label>`).join('');
+        let acct = '';
+        if (sb) {
+            acct = '<label>管理者</label>';
+            if (!session) {
+                acct += '<button class="set-btn" type="button" data-set="login">管理者ログイン（Discord）</button>';
+            } else {
+                if (isAdmin) {
+                    acct += `<button class="set-btn on" type="button" data-set="edit">${editMode ? '編集モードを終了' : '編集モード'}</button>
+                             <button class="set-btn" type="button" data-set="stats">アクセス統計を見る</button>`;
+                } else {
+                    acct += `<div class="hint">このDiscordアカウントには管理権限がありません。<br>${esc(adminDebug)}</div>`;
+                }
+                acct += '<button class="set-btn" type="button" data-set="logout">ログアウト</button>';
+            }
+        }
+        bg.innerHTML = `<div class="modal"><h3>設定</h3><label>表示モード</label>${radios}${acct}
+            <div class="actions"><button class="cancel" type="button">閉じる</button></div></div>`;
+        document.body.appendChild(bg);
+        const close = () => bg.remove();
+        $('.cancel', bg).onclick = close;
+        bg.addEventListener('mousedown', e => { if (e.target === bg) close(); });
+        for (const r of bg.querySelectorAll('input[name="themeMode"]')) {
+            r.onchange = () => {
+                try { if (r.value === 'system') localStorage.removeItem('theme'); else localStorage.setItem('theme', r.value); } catch (e) {}
+                applyTheme();
+            };
+        }
+        bg.addEventListener('click', async e => {
+            const b = e.target.closest('[data-set]');
+            if (!b) return;
+            const act = b.dataset.set;
+            if (act === 'login') {
+                await sb.auth.signInWithOAuth({ provider: 'discord', options: { redirectTo: location.origin + location.pathname } });
+            } else if (act === 'logout') {
+                await sb.auth.signOut();
+                close();
+            } else if (act === 'edit') {
+                editMode = !editMode;
+                renderAll();
+                close();
+            } else if (act === 'stats') {
+                close();
+                openStats();
+            }
+        });
+    }
+
+    // ---------- アクセス統計（管理者のみ） ----------
+    const PAGE_LABELS = { 'index.html': 'トップ', 'questions.html': '質問受付', 'datapacks.html': 'データパック等' };
+    const jstDay = offset => new Date(Date.now() - offset * 86400000).toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
+
+    function niceMax(m) {
+        const p = Math.pow(10, Math.floor(Math.log10(m)));
+        const n = m / p;
+        return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p;
+    }
+
+    function statsHtml(data, days) {
+        const map = new Map(((data && data.daily) || []).map(d => [d.day, d]));
+        const list = [];
+        for (let i = days - 1; i >= 0; i--) {
+            const day = jstDay(i), d = map.get(day) || {};
+            list.push({ day, visitors: d.visitors || 0, views: d.views || 0 });
+        }
+        const top = niceMax(Math.max(1, ...list.map(d => Math.max(d.visitors, d.views))));
+        const W = 640, H = 240, L = 34, R = 8, T = 10, B = 28, iw = W - L - R, ih = H - T - B, step = iw / days;
+        const bw = Math.max(2, step * 0.65);
+        const x = i => L + step * i + step / 2;
+        const y = v => T + ih - (v / top) * ih;
+        let svg = `<svg class="st-svg" viewBox="0 0 ${W} ${H}">`;
+        for (let k = 0; k <= 4; k++) {
+            const v = top * k / 4;
+            svg += `<line class="st-grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="st-txt" x="${L - 4}" y="${y(v) + 3}" text-anchor="end">${Math.round(v)}</text>`;
+        }
+        const every = Math.ceil(days / 6);
+        list.forEach((d, i) => {
+            svg += `<rect class="st-bar" x="${x(i) - bw / 2}" y="${y(d.visitors)}" width="${bw}" height="${T + ih - y(d.visitors)}"><title>${d.day}  訪問者 ${d.visitors} / 表示 ${d.views}</title></rect>`;
+            if (i === 0 || i === days - 1 || i % every === 0) svg += `<text class="st-txt" x="${x(i)}" y="${H - 10}" text-anchor="middle">${d.day.slice(5).replace('-', '/')}</text>`;
+        });
+        svg += `<polyline class="st-line" points="${list.map((d, i) => `${x(i)},${y(d.views)}`).join(' ')}"/></svg>`;
+
+        const sumV = list.reduce((a, d) => a + d.visitors, 0), sumW = list.reduce((a, d) => a + d.views, 0);
+        const pages = ((data && data.pages) || []), maxW = Math.max(1, ...pages.map(p => p.views));
+        return `<div class="st-cards">
+                <div class="st-card"><b>${list[list.length - 1].visitors}</b>今日の訪問者</div>
+                <div class="st-card"><b>${(sumV / days).toFixed(1)}</b>1日平均の訪問者</div>
+                <div class="st-card"><b>${sumW}</b>期間の表示回数</div></div>
+            <div class="st-legend"><span class="st-dot" style="background:var(--accent-group)"></span>訪問者（1日ごと）<span class="st-dot" style="background:var(--accent-tendon)"></span>表示回数</div>
+            ${svg}
+            <label>よく見られているページ</label>
+            ${pages.length ? pages.map(p => `<div class="st-row"><span>${esc(PAGE_LABELS[p.path] || p.path)}</span><div class="st-meter"><i style="width:${(p.views / maxW * 100).toFixed(0)}%"></i></div><span>${p.views}回 / ${p.visitors}人</span></div>`).join('') : '<div class="hint">まだデータがありません</div>'}
+            <div class="hint">「訪問者」は、同じブラウザを1日1人として数えています。自分（管理者）やlocalhostでの閲覧は数えません。</div>`;
+    }
+
+    function openStats() {
+        const bg = document.createElement('div');
+        bg.className = 'modal-bg';
+        bg.innerHTML = '<div class="modal" style="max-width:680px"><h3>アクセス統計</h3><div id="stPeriod"></div><div id="stBody">読み込み中…</div><div class="actions"><button class="cancel" type="button">閉じる</button></div></div>';
+        document.body.appendChild(bg);
+        let days = 30;
+        const chips = () => { $('#stPeriod', bg).innerHTML = '<div class="chips">' + [7, 30, 90].map(n => `<button class="chip${n === days ? ' on' : ''}" data-days="${n}">${n}日</button>`).join('') + '</div>'; };
+        const load = async () => {
+            chips();
+            const body = $('#stBody', bg);
+            body.innerHTML = '読み込み中…';
+            const { data, error } = await sb.rpc('get_stats', { p_days: days });
+            if (error) { body.textContent = '取得できませんでした（SQLを実行済みか確認してください）: ' + error.message; return; }
+            body.innerHTML = statsHtml(data, days);
+        };
+        bg.addEventListener('click', e => {
+            const c = e.target.closest('[data-days]');
+            if (c) { days = Number(c.dataset.days); load(); }
+        });
+        $('.cancel', bg).onclick = () => bg.remove();
+        bg.addEventListener('mousedown', e => { if (e.target === bg) bg.remove(); });
+        load();
+    }
+
+    // ---------- アクセスの記録（1ブラウザ・1ページ・1日につき1回） ----------
+    async function trackView() {
+        if (!sb || isAdmin) return;
+        const h = location.hostname;
+        if (h === 'localhost' || h === '127.0.0.1' || location.protocol === 'file:') return;
+        try {
+            const path = location.pathname.split('/').pop() || 'index.html';
+            const day = jstDay(0);
+            const key = `pv:${day}:${path}`;
+            if (localStorage.getItem(key)) return;
+            for (let i = localStorage.length - 1; i >= 0; i--) {         // 古い記録を掃除
+                const k = localStorage.key(i);
+                if (k && k.startsWith('pv:') && !k.startsWith(`pv:${day}:`)) localStorage.removeItem(k);
+            }
+            let vid = localStorage.getItem('visitorId');
+            if (!vid) { vid = crypto.randomUUID(); localStorage.setItem('visitorId', vid); }
+            localStorage.setItem(key, '1');
+            await sb.from('page_views').insert({ path, visitor: vid });
+        } catch (e) {}
+    }
+
     // ---------- 起動 ----------
     async function startSite() {
+        // アドレスバーの「/index.html」を「/」に整える（トップページのアドレスをすっきりさせる）
+        if (/\/index\.html$/.test(location.pathname)) {
+            try { history.replaceState(null, '', location.pathname.replace(/index\.html$/, '') + location.search + location.hash); } catch (e) {}
+        }
         applyTheme();
+        initSettingsButton();
         renderAll();                    // まず仮データで表示
         if (!sb) return;
         const { data } = await sb.auth.getSession();
         session = data.session;
         await checkAdmin();
         await reloadAll();
+        trackView();
         sb.auth.onAuthStateChange((event, s) => {
             setTimeout(async () => { session = s; await checkAdmin(); renderAll(); }, 0);
         });

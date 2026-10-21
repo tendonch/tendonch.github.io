@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>データパック配布 - Ghost Club</title>
+    <title>データパック等 - Ghost Club</title>
     <meta name="color-scheme" content="light dark">
     <meta name="darkreader-lock">
-    <link rel="stylesheet" href="style.css?v=5">
+    <link rel="stylesheet" href="style.css?v=8">
     <script>
         // 画面が描画される前にライト/ダークを決める（背景画像のちらつき・表示漏れ防止）
         (function () {
             try {
+                if (localStorage.getItem('themeV') !== '2') { localStorage.removeItem('theme'); localStorage.setItem('themeV', '2'); }   // 初期値を「システム」に統一（1回だけ）
                 var t = localStorage.getItem('theme');
                 var dark = t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
                 if (dark) document.documentElement.setAttribute('data-theme', 'dark');
@@ -28,64 +29,140 @@
     <div class="container">
         <nav id="siteNav" class="site-nav"></nav>
         <h1>Ghost Club</h1>
-        <p class="site-desc">データパック配布</p>
+        <p class="site-desc">データパック等</p>
 
         <div class="section">
-            <div class="section-title">企画で使ったデータパック</div>
-            <div id="dpArea"></div>
-        </div>
-
-        <div class="footer-toggle">
-            <button class="mode-toggle" id="modeToggleBtn">モードを切り替える</button>
-            <div class="admin-area" id="adminArea"></div>
+            <div class="title-row">
+                <div class="section-title">データパック・リソースパック等</div>
+                <div id="pkAdd"></div>
+            </div>
+            <div class="member-box" id="pkFilters">
+                <input type="text" id="pkSearch" class="pk-search" placeholder="名前・説明・ファイル名で検索">
+                <div id="pkChips"></div>
+            </div>
+            <div id="pkBack" style="display:none"><a class="dl-btn" href="datapacks.html" style="display:inline-block">← すべての配布物を見る</a></div>
+            <div id="pkArea" style="margin-top:12px"></div>
         </div>
 
     </div>
 
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-    <script src="site.js?v=5"></script>
+    <script src="site.js?v=8"></script>
     <script>
+    const CATS = { datapack: 'データパック', resourcepack: 'リソースパック', world: 'ワールド・マップ', addon: 'アドオン', other: 'その他' };
+    const PLATS = { java: 'Java版', bedrock: '統合版' };
+    state.packs = [];
+    let sharedMode = false;                       // 限定公開リンク（#コード）で開いているとき
+    const filt = { q: '', plat: 'all', cat: 'all' };
 
-    state.datapacks = [];
+    // 「表示名 | URL」「バージョン | 日付 | 内容」の行 ⇔ データ の変換
+    const split = t => t.split('\n').map(l => l.split('|').map(s => s.trim()));
+    const filesToText = a => (Array.isArray(a) ? a : []).map(f => `${f.name || ''} | ${f.url || ''}`).join('\n');
+    const textToFiles = t => split(t).filter(p => p.length >= 2 && p[1]).map(p => ({ name: p[0] || 'ダウンロード', url: p.slice(1).join('|') }));
+    const logToText = a => (Array.isArray(a) ? a : []).map(e => `${e.version || ''} | ${e.date || ''} | ${e.note || ''}`).join('\n');
+    const textToLog = t => split(t).filter(p => p.length >= 3 && (p[0] || p[2])).map(p => ({ version: p[0], date: p[1], note: p.slice(2).join('|') }));
 
     Object.assign(FORMS, {
-        datapack: {
-            table: 'datapacks', listKey: 'datapacks', title: 'データパック',
+        pack: {
+            table: 'packs', listKey: 'packs', title: '配布物',
+            defaults: { sort_order: 0, category: 'datapack', platforms: ['java'], visibility: 'public' },
             fields: [
                 { k: 'title', label: '名前', type: 'text', required: true },
-                { k: 'description', label: '説明（どの企画で使ったか・導入方法など）', type: 'textarea' },
+                { k: 'category', label: '種類', type: 'select', options: Object.entries(CATS) },
+                { k: 'platforms', label: '対応（タグ）', type: 'checks', options: Object.entries(PLATS) },
                 { k: 'mc_version', label: '対応バージョン（例: 1.21.x）', type: 'text' },
-                { k: 'download_url', label: 'ダウンロード', type: 'file', required: true, hint: 'ファイルは50MBまで。大きいものはGoogleドライブ等のURLを入力してください' },
+                { k: 'description', label: '説明（どの企画で使ったか・導入方法など）', type: 'textarea' },
+                { k: 'files', label: 'ファイル（複数OK）', type: 'files', required: true, toText: filesToText, fromText: textToFiles,
+                  hint: '1行に「表示名 | URL」。ファイルを選ぶと自動で追加されます（1つ50MBまで。大きいものはURLで指定）' },
+                { k: 'changelog', label: '更新履歴（1行に1つ）', type: 'lines', toText: logToText, fromText: textToLog,
+                  hint: '「バージョン | 日付 | 内容」の形。例: v1.1 | 2026-10-21 | バグを修正' },
                 { k: 'icon_url', label: '画像（任意）', type: 'image' },
+                { k: 'visibility', label: '公開設定', type: 'select', options: [['public', '公開（一覧に表示）'], ['unlisted', '限定公開（一覧に出さず、リンクを知っている人だけ）']] },
                 { k: 'sort_order', label: '表示順（小さいほど上）', type: 'number' }
             ]
         }
     });
 
     async function loadPageData() {
+        sharedMode = false;
+        state.packs = [];
         if (!sb) return;
-        const d = await sb.from('datapacks').select('*').order('sort_order').order('created_at', { ascending: false });
-        if (d.error) { console.warn('データパックを取得できません（SQLを実行済みか確認してください）', d.error.message); state.datapacks = []; return; }
-        state.datapacks = d.data;
+        const code = location.hash.replace('#', '');
+        if (code.length >= 8) {                       // 限定公開リンク
+            const r = await sb.rpc('get_pack_by_code', { p_code: code });
+            if (!r.error && r.data && r.data.length) { sharedMode = true; state.packs = r.data; return; }
+        }
+        const p = await sb.from('packs').select('*').order('sort_order').order('created_at', { ascending: false });
+        if (p.error) { console.warn('配布物を取得できません（SQLを実行済みか確認してください）', p.error.message); return; }
+        state.packs = p.data;
+    }
+
+    const fmtDate = d => { const x = new Date(d); return isNaN(x) ? (d || '') : x.toLocaleDateString('ja-JP'); };
+    const logOf = p => (Array.isArray(p.changelog) ? [...p.changelog] : []).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+
+    function packCard(p) {
+        const icon = safeIcon(p.icon_url);
+        const log = logOf(p);
+        const updated = (log[0] && log[0].date) || p.updated_at;
+        const plats = (p.platforms || []).map(x => `<span class="badge plat-${esc(x)}">${esc(PLATS[x] || x)}</span>`).join('');
+        const files = (Array.isArray(p.files) ? p.files : []).map(f =>
+            `<a class="dl-btn" href="${esc(safeUrl(f.url))}" target="_blank" rel="noopener" download>${esc(f.name || 'ダウンロード')}</a>`).join('');
+        const logHtml = log.length ? `<details class="pk-log"><summary>更新履歴（${log.length}件）</summary>${log.map(e =>
+            `<div class="pk-log-item"><b>${esc(e.version || '')}</b><span class="d">${esc(fmtDate(e.date))}</span><div>${esc(e.note || '')}</div></div>`).join('')}</details>` : '';
+        const admin = editMode ? `<div class="pk-admin">${adminBtns('pack', p.id)}<button class="mini-btn" data-act="copylink" data-code="${esc(p.share_code)}">リンクをコピー</button></div>` : '';
+        return `<div class="pk-card">
+            <div class="pk-head">${icon ? `<img class="member-avatar" src="${esc(icon)}" alt="">` : ''}<div class="pk-title">${esc(p.title)}</div></div>
+            <div class="pk-meta"><span class="badge cat">${esc(CATS[p.category] || p.category)}</span>${plats}
+                ${p.mc_version ? `<span class="badge">${esc(p.mc_version)}</span>` : ''}
+                ${p.visibility === 'unlisted' ? '<span class="badge unlisted">限定公開</span>' : ''}
+                ${updated ? `<span class="pk-date">更新: ${esc(fmtDate(updated))}</span>` : ''}</div>
+            ${p.description ? `<div class="pk-desc">${esc(p.description)}</div>` : ''}
+            ${files ? `<div class="pk-files">${files}</div>` : ''}
+            ${logHtml}${admin}</div>`;
     }
 
     function renderPage() {
-        const box = $('#dpArea');
-        const add = editMode ? '<button class="mini-btn add big" data-act="add" data-kind="datapack">＋ データパックを追加</button>' : '';
-        if (!state.datapacks.length) {
-            box.innerHTML = '<div class="member-box">まだ配布しているデータパックはありません。</div>' + add;
+        $('#pkFilters').style.display = sharedMode ? 'none' : '';
+        $('#pkBack').style.display = sharedMode ? '' : 'none';
+        $('#pkAdd').innerHTML = editMode ? '<button class="mini-btn add" data-act="add" data-kind="pack">＋ 追加</button>' : '';
+        const chip = (attr, val, label, cur) => `<button class="chip${cur === val ? ' on' : ''}" data-${attr}="${val}">${esc(label)}</button>`;
+        setHtml($('#pkChips'),
+            `<div class="chips">${chip('plat', 'all', 'すべて', filt.plat)}${Object.entries(PLATS).map(([k, l]) => chip('plat', k, l, filt.plat)).join('')}</div>` +
+            `<div class="chips">${chip('cat', 'all', 'すべての種類', filt.cat)}${Object.entries(CATS).map(([k, l]) => chip('cat', k, l, filt.cat)).join('')}</div>`);
+
+        const q = filt.q.trim().toLowerCase();
+        const list = state.packs.filter(p => {
+            if (sharedMode) return true;
+            if (filt.plat !== 'all' && !(p.platforms || []).includes(filt.plat)) return false;
+            if (filt.cat !== 'all' && p.category !== filt.cat) return false;
+            if (!q) return true;
+            const hay = [p.title, p.description, p.mc_version, CATS[p.category], ...(p.platforms || []).map(x => PLATS[x]),
+                ...(Array.isArray(p.files) ? p.files : []).map(f => f.name)].join(' ').toLowerCase();
+            return q.split(/\s+/).every(w => hay.includes(w));
+        });
+        $('#pkArea').innerHTML = list.length
+            ? `<div class="pk-list">${list.map(packCard).join('')}</div>`
+            : `<div class="member-box">${state.packs.length ? '条件に合うものが見つかりませんでした。' : 'まだ配布物はありません。'}</div>`;
+    }
+
+    $('#pkSearch').addEventListener('input', e => { filt.q = e.target.value; renderPage(); });
+    window.addEventListener('hashchange', () => reloadAll());
+    document.addEventListener('click', async e => {
+        const c = e.target.closest('[data-plat],[data-cat]');
+        if (c) {
+            if (c.dataset.plat !== undefined) filt.plat = c.dataset.plat;
+            if (c.dataset.cat !== undefined) filt.cat = c.dataset.cat;
+            renderPage();
             return;
         }
-        box.innerHTML = '<div class="member-grid">' + state.datapacks.map(d => {
-            const icon = safeIcon(d.icon_url);
-            const avatar = icon ? `<img class="member-avatar" src="${esc(icon)}" alt="">` : '';
-            return `<div class="member-card"><div class="member-main">${avatar}<div class="member-info">
-                <div class="member-name">${esc(d.title)}${d.mc_version ? `<span class="dp-ver">${esc(d.mc_version)}</span>` : ''}</div>
-                ${d.description ? `<div class="member-intro">${esc(d.description)}</div>` : ''}
-            </div><a class="dl-btn" href="${esc(safeUrl(d.download_url))}" target="_blank" rel="noopener" download>ダウンロード</a></div>${adminBtns('datapack', d.id)}</div>`;
-        }).join('') + '</div><div style="margin-top:12px">' + add + '</div>';
-    }
+        const cp = e.target.closest('[data-act="copylink"]');
+        if (cp) {
+            const url = location.origin + location.pathname + '#' + cp.dataset.code;
+            try { await navigator.clipboard.writeText(url); cp.textContent = 'コピーしました'; }
+            catch (err) { prompt('このリンクをコピーしてください', url); }
+        }
+    });
 
     startSite();
 

@@ -6,11 +6,12 @@
     <title>Ghost Club - 公式ポータルサイト</title>
     <meta name="color-scheme" content="light dark">
     <meta name="darkreader-lock">
-    <link rel="stylesheet" href="style.css?v=5">
+    <link rel="stylesheet" href="style.css?v=8">
     <script>
         // 画面が描画される前にライト/ダークを決める（背景画像のちらつき・表示漏れ防止）
         (function () {
             try {
+                if (localStorage.getItem('themeV') !== '2') { localStorage.removeItem('theme'); localStorage.setItem('themeV', '2'); }   // 初期値を「システム」に統一（1回だけ）
                 var t = localStorage.getItem('theme');
                 var dark = t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
                 if (dark) document.documentElement.setAttribute('data-theme', 'dark');
@@ -66,16 +67,11 @@
         <!-- 4. 個人チャンネル（データベースから表示） -->
         <div id="channelArea"></div>
 
-        <div class="footer-toggle">
-            <button class="mode-toggle" id="modeToggleBtn">モードを切り替える</button>
-            <div class="admin-area" id="adminArea"></div>
-        </div>
-
     </div>
 
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-    <script src="site.js?v=5"></script>
+    <script src="site.js?v=8"></script>
     <script>
     // データベースに接続できないとき・未設定のときに表示する内容
     const FALLBACK_MEMBERS = [];
@@ -199,7 +195,7 @@
                 { k: 'color', label: 'テーマカラー', type: 'color' },
                 { k: 'youtube_channel_id', label: 'YouTubeチャンネルID（最新動画の表示用）', type: 'text', hint: 'UC から始まる24文字。空なら動画は表示しません' },
                 { k: 'icon_url', label: 'アイコン', type: 'image' },
-                { k: 'links', label: 'リンク一覧（1行に1つ）', type: 'textarea', hint: '「ラベル | 表示するハンドル | URL」の形で書きます。例: メインチャンネル | @abc | https://www.youtube.com/@abc' },
+                { k: 'links', label: 'リンク一覧（1行に1つ）', type: 'lines', toText: linksToText, fromText: textToLinks, hint: '「ラベル | 表示するハンドル | URL」の形で書きます。例: メインチャンネル | @abc | https://www.youtube.com/@abc' },
                 { k: 'sort_order', label: '表示順（小さいほど上）', type: 'number' }
             ]
         }
