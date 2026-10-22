@@ -41,12 +41,12 @@
         renderAll();
     }
 
-    const NAV = [['./', 'トップ', 'index.html'], ['questions.html', '質問受付', 'questions.html'], ['datapacks.html', 'データパック等', 'datapacks.html']];
+    const NAV = [['./', 'トップ', 'index.html'], ['questions.html', '質問受付', 'questions.html'], ['datapacks.html', 'データパック等', 'datapacks.html'], ['people.html', '他のページ', 'people.html']];
     function renderNav() {
         const el = $('#siteNav');
         if (!el) return;
         const cur = location.pathname.split('/').pop() || 'index.html';
-        el.innerHTML = NAV.map(([href, label, file]) => `<a href="${href}" class="${file === cur ? 'active' : ''}">${label}</a>`).join('');
+        el.innerHTML = NAV.map(([href, label, file]) => `<a href="${href}" class="${(file === cur || (file === 'people.html' && cur === 'page.html')) ? 'active' : ''}">${label}</a>`).join('');
     }
 
     function renderAll() {
@@ -97,6 +97,25 @@
         el.innerHTML = `<div class="announce-bar">${items}${addBtn}</div>`;
     }
 
+    // ---------- 他のページ（people.html / page.html で共通） ----------
+    const randomSlug = () => Math.random().toString(36).slice(2, 10).padEnd(8, 'x');
+    FORMS.page = {
+        table: 'pages', listKey: 'pages', title: 'ページ', defaults: { sort_order: 0 },
+        fields: [
+            { k: 'title', label: 'ページの名前', type: 'text', required: true },
+            { k: 'slug', label: 'アドレス名（英小文字・数字・ハイフン。空なら自動）', type: 'text', hint: '例: petra → page.html?p=petra 。あとから変えるとリンクが変わります' },
+            { k: 'description', label: '紹介文（任意）', type: 'textarea' },
+            { k: 'icon_url', label: 'アイコン（任意）', type: 'image' },
+            { k: 'bg_light_url', label: '背景（ライトモード用・任意）', type: 'image', maxMB: 10 },
+            { k: 'bg_dark_url', label: '背景（ダークモード用・任意）', type: 'image', maxMB: 10 },
+            { k: 'sort_order', label: '表示順（小さいほど上）', type: 'number' }
+        ],
+        validate(p) {
+            if (!p.slug) p.slug = randomSlug();
+            if (!/^[a-z0-9-]{2,40}$/.test(p.slug)) throw new Error('アドレス名は、英小文字・数字・ハイフンの2〜40文字にしてください');
+        }
+    };
+
     // ---------- 編集フォーム ----------
     FORMS.announcement = {
         table: 'announcements', listKey: 'announcements', defaults: { active: true }, title: 'お知らせ',
@@ -108,10 +127,10 @@
     };
 
 
-    async function uploadFile(file, bucket, imageOnly) {
+    async function uploadFile(file, bucket, imageOnly, maxMB = 2) {
         if (imageOnly) {
             if (!file.type.startsWith('image/')) throw new Error('画像ファイルを選んでください');
-            if (file.size > 2 * 1024 * 1024) throw new Error('画像は2MB以下にしてください');
+            if (file.size > maxMB * 1024 * 1024) throw new Error(`画像は${maxMB}MB以下にしてください`);
         } else if (file.size > 50 * 1024 * 1024) {
             throw new Error('ファイルは50MB以下にしてください（大きいものはURLで指定してください）');
         }
@@ -180,7 +199,7 @@
                     let v = f.type === 'checkbox' ? el.checked : el.value.trim();
                     if (f.type === 'image' || f.type === 'file') {
                         const file = $(`[data-file="${f.k}"]`, bg).files[0];
-                        if (file) v = await uploadFile(file, f.type === 'image' ? 'icons' : 'files', f.type === 'image');
+                        if (file) v = await uploadFile(file, f.type === 'image' ? 'icons' : 'files', f.type === 'image', f.maxMB);
                     }
                     if (f.required && !v) throw new Error(`${f.label.split('（')[0]}を入力してください`);
                     if (f.type === 'number') v = Number(v) || 0;
@@ -191,6 +210,8 @@
                     if (payload.youtube_channel_id && !validChId(payload.youtube_channel_id)) throw new Error('YouTubeチャンネルIDは「UC」で始まる24文字です');
                     if (!payload.color) payload.color = '#3b82f6';
                 }
+                if (def.validate) def.validate(payload);
+                if (!row && def.extra) Object.assign(payload, await def.extra(payload));
                 const q = row ? sb.from(def.table).update(payload).eq('id', row.id) : sb.from(def.table).insert(payload);
                 const { data, error } = await q.select();
                 if (error) throw error;
@@ -328,7 +349,8 @@
     }
 
     // ---------- アクセス統計（管理者のみ） ----------
-    const PAGE_LABELS = { 'index.html': 'トップ', 'questions.html': '質問受付', 'datapacks.html': 'データパック等' };
+    const PAGE_LABELS = { 'index.html': 'トップ', 'questions.html': '質問受付', 'datapacks.html': 'データパック等', 'people.html': '他のページ一覧' };
+    const pageLabel = p => PAGE_LABELS[p] || (p.startsWith('page.html?p=') ? '他のページ: ' + p.slice(12) : p);
     const jstDay = offset => new Date(Date.now() - offset * 86400000).toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
 
     function niceMax(m) {
@@ -370,7 +392,7 @@
             <div class="st-legend"><span class="st-dot" style="background:var(--accent-group)"></span>訪問者（1日ごと）<span class="st-dot" style="background:var(--accent-tendon)"></span>表示回数</div>
             ${svg}
             <label>よく見られているページ</label>
-            ${pages.length ? pages.map(p => `<div class="st-row"><span>${esc(PAGE_LABELS[p.path] || p.path)}</span><div class="st-meter"><i style="width:${(p.views / maxW * 100).toFixed(0)}%"></i></div><span>${p.views}回 / ${p.visitors}人</span></div>`).join('') : '<div class="hint">まだデータがありません</div>'}
+            ${pages.length ? pages.map(p => `<div class="st-row"><span>${esc(pageLabel(p.path))}</span><div class="st-meter"><i style="width:${(p.views / maxW * 100).toFixed(0)}%"></i></div><span>${p.views}回 / ${p.visitors}人</span></div>`).join('') : '<div class="hint">まだデータがありません</div>'}
             <div class="hint">「訪問者」は、同じブラウザを1日1人として数えています。自分（管理者）やlocalhostでの閲覧は数えません。</div>`;
     }
 
@@ -404,7 +426,9 @@
         const h = location.hostname;
         if (h === 'localhost' || h === '127.0.0.1' || location.protocol === 'file:') return;
         try {
-            const path = location.pathname.split('/').pop() || 'index.html';
+            const file = location.pathname.split('/').pop() || 'index.html';
+            const slug = (new URLSearchParams(location.search).get('p') || '').slice(0, 40);
+            const path = file === 'page.html' && slug ? `page.html?p=${slug}` : file;
             const day = jstDay(0);
             const key = `pv:${day}:${path}`;
             if (localStorage.getItem(key)) return;
