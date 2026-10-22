@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>他のページ｜Ghost Club（ゴースト部）</title>
-    <meta name="description" content="ゴースト部（Ghost Club）のメンバーや企画ごとのページ一覧です。" id="metaDesc">
+    <meta name="description" content="ゴースト部（Ghost Club）のメンバーや企画ごとのページです。" id="metaDesc">
     <link rel="canonical" href="https://tendonch.github.io/people.html" id="canon">
     <meta name="robots" content="index, follow, max-image-preview:large">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Ghost Club（ゴースト部）">
     <meta property="og:title" content="他のページ｜Ghost Club（ゴースト部）" id="ogTitle">
-    <meta property="og:description" content="ゴースト部（Ghost Club）のメンバーや企画ごとのページ一覧です。" id="ogDesc">
+    <meta property="og:description" content="ゴースト部（Ghost Club）のメンバーや企画ごとのページです。" id="ogDesc">
     <meta property="og:url" content="https://tendonch.github.io/people.html" id="ogUrl">
     <meta property="og:image" content="https://tendonch.github.io/bg-dark.jpg">
     <meta property="og:locale" content="ja_JP">
@@ -19,7 +19,7 @@
     <link rel="apple-touch-icon" href="favicon.png">
     <meta name="color-scheme" content="light dark">
     <meta name="darkreader-lock">
-    <link rel="stylesheet" href="style.css?v=9">
+    <link rel="stylesheet" href="style.css?v=10">
     <script>
         // 画面が描画される前にライト/ダークを決める（背景画像のちらつき・表示漏れ防止）
         (function () {
@@ -44,41 +44,200 @@
         <h1>Ghost Club</h1>
         <p class="site-desc">他のページ</p>
 
-        <div class="section">
-            <div class="title-row">
-                <div class="section-title">他のページ</div>
-                <div id="pgAdd"></div>
-            </div>
-            <div id="pgArea"></div>
-        </div>
+        <div id="pgHead"></div>
+        <div id="pgBody"></div>
 
     </div>
 
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-    <script src="site.js?v=10"></script>
+    <script src="site.js?v=11"></script>
     <script>
+    // 追加できるブロックの種類
+    const BLOCK_TYPES = {
+        text: { btn: 'テキスト', title: 'テキスト', fields: [
+            { k: 'label', label: '見出し（任意）', type: 'text' },
+            { k: 'content', label: '本文', type: 'textarea', required: true } ] },
+        link: { btn: 'リンクボタン（押すと別のサイトへ）', title: 'リンクボタン', fields: [
+            { k: 'label', label: 'ボタンの名前', type: 'text', required: true },
+            { k: 'url', label: 'リンク先URL', type: 'text', required: true },
+            { k: 'content', label: 'ひとこと説明（任意）', type: 'text' } ] },
+        download: { btn: 'ダウンロードボタン', title: 'ダウンロードボタン', fields: [
+            { k: 'label', label: 'ボタンの名前', type: 'text', required: true },
+            { k: 'url', label: 'ダウンロードするファイル', type: 'file', required: true, hint: 'ファイルを選ぶか、URLを入力（ファイルは50MBまで）' },
+            { k: 'content', label: 'ひとこと説明（任意）', type: 'text' } ] },
+        embed: { btn: '埋め込み（YouTubeなどの動画）', title: '埋め込み', fields: [
+            { k: 'label', label: 'タイトル（任意）', type: 'text' },
+            { k: 'url', label: '埋め込むページのURL', type: 'text', required: true, hint: 'YouTube・ニコニコ動画のURLを貼ると、自動で埋め込み用に直します。再生リストやチャンネルのURLもOK' } ] },
+        html: { btn: '自分で書いたHTML（コードを貼り付け）', title: 'HTML', fields: [
+            { k: 'label', label: 'タイトル（任意）', type: 'text' },
+            { k: 'content', label: 'HTMLコード', type: 'textarea', required: true, hint: '安全のため、独立した枠の中で表示されます（このサイトのログイン情報やlocalStorageには触れません）' },
+            { k: 'height', label: '表示する高さ（px・空なら400）', type: 'number' } ] },
+        page: { btn: '新しいページへのボタン', title: '新しいページ', fields: [
+            { k: 'label', label: 'ボタンの名前（新しいページの名前にもなります）', type: 'text', required: true },
+            { k: 'icon_url', label: 'アイコン（任意）', type: 'image' } ] }
+    };
+
     state.pages = [];
+    state.blocks = [];
+    let cur = null, parentSlug = null, subSlugs = {};
+    const nextOrder = () => Math.max(0, ...state.blocks.map(b => b.sort_order || 0)) + 1;
+
+    for (const [type, d] of Object.entries(BLOCK_TYPES)) {
+        FORMS['block_' + type] = {
+            table: 'blocks', listKey: 'blocks', title: d.title, fields: d.fields,
+            async extra(payload) {
+                const e = { page_id: cur.id, type, sort_order: nextOrder() };
+                if (type === 'page') {           // 新しい子ページを作ってつなぐ
+                    const r = await sb.from('pages').insert({ slug: randomSlug(), title: payload.label, parent_id: cur.id }).select();
+                    if (r.error || !r.data || !r.data.length) throw new Error('新しいページを作れませんでした');
+                    e.target_page_id = r.data[0].id;
+                }
+                return e;
+            }
+        };
+    }
 
     async function loadPageData() {
+        cur = null; parentSlug = null; subSlugs = {};
+        state.pages = []; state.blocks = [];
         if (!sb) return;
-        const p = await sb.from('pages').select('*').is('parent_id', null).order('sort_order').order('created_at');
-        if (p.error) { console.warn('ページを取得できません（SQLを実行済みか確認してください）', p.error.message); state.pages = []; return; }
-        state.pages = p.data;
+        const slug = new URLSearchParams(location.search).get('p') || '';
+        const p = await sb.from('pages').select('*').eq('slug', slug).limit(1);
+        if (p.error || !p.data || !p.data.length) return;
+        cur = p.data[0];
+        const [b, subs, par] = await Promise.all([
+            sb.from('blocks').select('*').eq('page_id', cur.id).order('sort_order').order('created_at'),
+            sb.from('pages').select('*').eq('parent_id', cur.id),
+            cur.parent_id ? sb.from('pages').select('slug').eq('id', cur.parent_id).limit(1) : Promise.resolve({ data: [] })
+        ]);
+        state.blocks = b.data || [];
+        state.pages = [cur, ...(subs.data || [])];
+        for (const s of (subs.data || [])) subSlugs[s.id] = s.slug;
+        parentSlug = par.data && par.data[0] ? par.data[0].slug : null;
+    }
+
+    // このページ専用の背景（ライト用・ダーク用。片方だけならどちらにも使う）
+    function applyBg() {
+        const el = $('#bgLayer');
+        const l = safeIcon(cur && cur.bg_light_url) || safeIcon(cur && cur.bg_dark_url);
+        const d = safeIcon(cur && cur.bg_dark_url) || l;
+        const set = (k, v) => el.style.setProperty ? el.style.setProperty(k, v) : (el.style[k] = v);
+        const rm = k => el.style.removeProperty ? el.style.removeProperty(k) : (el.style[k] = '');
+        if (l) set('--bg-img', `url("${l}")`); else rm('--bg-img');
+        if (d) set('--bg-img-dark', `url("${d}")`); else rm('--bg-img-dark');
+    }
+
+    // YouTube / ニコニコ動画のURLを埋め込み用に変換（それ以外のhttpsページはそのまま）
+    function toEmbed(u) {
+        let x;
+        try { x = new URL(u); } catch (e) { return null; }
+        if (!/^https?:$/.test(x.protocol)) return null;
+        const h = x.hostname.replace(/^www\./, '');
+        const yt = src => ({ src, yt: true });
+        if (h === 'youtu.be') { const id = x.pathname.slice(1); return /^[\w-]{6,20}$/.test(id) ? yt(`https://www.youtube.com/embed/${id}`) : null; }
+        if (h === 'youtube.com' || h === 'm.youtube.com') {
+            const seg = x.pathname.split('/');
+            const list = x.searchParams.get('list');
+            if (x.pathname === '/watch') { const id = x.searchParams.get('v'); if (/^[\w-]{6,20}$/.test(id || '')) return yt(`https://www.youtube.com/embed/${id}`); }
+            if (['shorts', 'embed', 'live'].includes(seg[1]) && /^[\w-]{6,20}$/.test(seg[2] || '')) return yt(`https://www.youtube.com/embed/${seg[2]}`);
+            if (x.pathname === '/playlist' && /^[\w-]+$/.test(list || '')) return yt(`https://www.youtube.com/embed?listType=playlist&list=${list}`);
+            if (seg[1] === 'channel' && validChId(seg[2])) return yt(`https://www.youtube.com/embed?listType=playlist&list=UULF${seg[2].slice(2)}`);
+            return null;                                   // @ハンドルなどは変換できない
+        }
+        if (h === 'nicovideo.jp' && /^\/watch\/(sm|nm|so)?\d+$/.test(x.pathname)) return { src: `https://embed.nicovideo.jp${x.pathname}`, yt: false };
+        return { src: x.href, yt: false };
+    }
+
+    function blockHtml(b) {
+        let inner = '';
+        const linkCard = (href, title, sub, btnText, color, extra = '') =>
+            `<a class="card" href="${esc(href)}" ${extra}><div class="card-info"><div class="card-title">${esc(title)}</div>${sub ? `<div class="card-sub">${esc(sub)}</div>` : ''}</div><div class="btn" style="background-color:${color}">${btnText}</div></a>`;
+        if (b.type === 'text') {
+            inner = `<div class="pg-box">${b.label ? `<div class="pg-h">${esc(b.label)}</div>` : ''}${esc(b.content)}</div>`;
+        } else if (b.type === 'link') {
+            inner = linkCard(safeUrl(b.url), b.label, b.content, '開く', 'var(--accent-group)', 'target="_blank" rel="noopener"');
+        } else if (b.type === 'download') {
+            inner = linkCard(safeUrl(b.url), b.label, b.content, 'ダウンロード', 'var(--accent-tendon)', 'target="_blank" rel="noopener" download');
+        } else if (b.type === 'embed') {
+            const em = toEmbed(b.url);
+            if (em) {
+                inner = `<div class="pg-embed">${b.label ? `<div class="sub-section-title">${esc(b.label)}</div>` : ''}<div class="video-container"><iframe src="${esc(em.src)}" title="${esc(b.label || '埋め込み')}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"
+                    ${em.yt ? 'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"' : 'sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"'} allowfullscreen></iframe></div></div>`;
+            } else {
+                inner = linkCard(safeUrl(b.url), b.label || '埋め込めないURLです', 'クリックして開く', '開く', 'var(--accent-group)', 'target="_blank" rel="noopener"');
+            }
+        } else if (b.type === 'html') {
+            const hh = Math.min(Math.max(Number(b.height) || 400, 100), 2000);
+            inner = `<div class="pg-embed">${b.label ? `<div class="sub-section-title">${esc(b.label)}</div>` : ''}<iframe class="pg-html" style="height:${hh}px" sandbox="allow-scripts allow-popups allow-forms allow-modals" loading="lazy" srcdoc="${esc(b.content)}" title="${esc(b.label || 'HTML')}"></iframe></div>`;
+        } else if (b.type === 'page') {
+            const slug = subSlugs[b.target_page_id];
+            const icon = safeIcon(b.icon_url);
+            inner = slug
+                ? `<a class="card" href="page.html?p=${encodeURIComponent(slug)}"><div class="card-info" style="display:flex;align-items:center;gap:12px">${icon ? `<img class="channel-icon" src="${esc(icon)}" alt="">` : ''}<div class="card-title">${esc(b.label)}</div></div><div class="btn" style="background-color:var(--accent-group)">ページへ ▶</div></a>`
+                : `<div class="pg-box">${esc(b.label)}（ページが見つかりません）</div>`;
+        }
+        const admin = editMode ? `<div class="pg-admin">${adminBtns('block_' + b.type, b.id)}<button class="mini-btn" data-act="up" data-id="${esc(b.id)}">↑</button><button class="mini-btn" data-act="down" data-id="${esc(b.id)}">↓</button></div>` : '';
+        return `<div>${inner}${admin}</div>`;
     }
 
     function renderPage() {
-        $('#pgAdd').innerHTML = editMode ? '<button class="mini-btn add" data-act="add" data-kind="page">＋ ページを追加</button>' : '';
-        const box = $('#pgArea');
-        if (!state.pages.length) { box.innerHTML = '<div class="member-box">まだ他のページはありません。</div>'; return; }
-        box.innerHTML = '<div class="member-grid">' + state.pages.map(p => {
-            const icon = safeIcon(p.icon_url);
-            const avatar = icon ? `<img class="member-avatar" src="${esc(icon)}" alt="">` : `<div class="member-avatar ph">${esc((p.title || '?').slice(0, 1))}</div>`;
-            return `<div class="member-card"><a class="member-main" href="page.html?p=${encodeURIComponent(p.slug)}">${avatar}<div class="member-info">
-                <div class="member-name">${esc(p.title)}</div>${p.description ? `<div class="member-intro">${esc(p.description)}</div>` : ''}
-            </div></a>${adminBtns('page', p.id)}</div>`;
-        }).join('') + '</div>';
+        applyBg();
+        const head = $('#pgHead'), body = $('#pgBody');
+        if (!cur) {
+            head.innerHTML = '<a class="back-btn" href="people.html">← 他のページ一覧へ</a>';
+            body.innerHTML = '<div class="member-box">ページが見つかりません。</div>';
+            return;
+        }
+        document.title = `${cur.title}｜Ghost Club（ゴースト部）`;
+        const metaDesc = (cur.description || `${cur.title}のページです。`).replace(/\s+/g, ' ').slice(0, 120);
+        const pageUrl = `https://tendonch.github.io/page.html?p=${encodeURIComponent(cur.slug)}`;
+        $('#metaDesc').setAttribute('content', metaDesc);
+        $('#ogDesc').setAttribute('content', metaDesc);
+        $('#ogTitle').setAttribute('content', document.title);
+        $('#ogUrl').setAttribute('href', pageUrl);
+        $('#ogUrl').setAttribute('content', pageUrl);
+        $('#canon').setAttribute('href', pageUrl);
+        const back = cur.parent_id && parentSlug ? `page.html?p=${encodeURIComponent(parentSlug)}` : 'people.html';
+        const icon = safeIcon(cur.icon_url);
+        head.innerHTML = `<a class="back-btn" href="${back}">← 戻る</a>
+            <div class="pg-title">${icon ? `<img class="member-avatar" src="${esc(icon)}" alt="">` : ''}<div><div class="pg-name">${esc(cur.title)}</div>${cur.description ? `<div class="pg-desc">${esc(cur.description)}</div>` : ''}</div></div>
+            ${editMode ? `<div class="pg-admin" style="margin-bottom:14px"><button class="mini-btn" data-act="edit" data-kind="page" data-id="${esc(cur.id)}">ページ設定（名前・背景など）</button></div>` : ''}`;
+        setHtml(body, `<div class="pg-list">${state.blocks.map(blockHtml).join('')}</div>`
+            + (editMode ? '<div style="margin-top:14px"><button class="mini-btn add big" data-act="addblock">＋ 追加する</button></div>'
+                : (state.blocks.length ? '' : '<div class="member-box">まだ何もありません。</div>')));
     }
+
+    function chooseBlock() {
+        const bg = document.createElement('div');
+        bg.className = 'modal-bg';
+        bg.innerHTML = `<div class="modal"><h3>追加するもの</h3>${Object.entries(BLOCK_TYPES).map(([t, d]) => `<button class="set-btn" type="button" data-t="${t}">${esc(d.btn)}</button>`).join('')}
+            <div class="actions"><button class="cancel" type="button">キャンセル</button></div></div>`;
+        document.body.appendChild(bg);
+        bg.addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (b) { bg.remove(); openForm('block_' + b.dataset.t, null); } });
+        $('.cancel', bg).onclick = () => bg.remove();
+        bg.addEventListener('mousedown', e => { if (e.target === bg) bg.remove(); });
+    }
+
+    async function moveBlock(id, dir) {
+        const arr = [...state.blocks];
+        const i = arr.findIndex(b => b.id === id), j = i + dir;
+        if (i < 0 || j < 0 || j >= arr.length) return;
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+        for (let k = 0; k < arr.length; k++) {
+            if (arr[k].sort_order === k) continue;
+            const r = await sb.from('blocks').update({ sort_order: k }).eq('id', arr[k].id).select();
+            if (r.error) { alert('並べ替えできませんでした: ' + r.error.message); break; }
+        }
+        await reloadAll();
+    }
+
+    document.addEventListener('click', e => {
+        const b = e.target.closest('[data-act="addblock"],[data-act="up"],[data-act="down"]');
+        if (!b) return;
+        if (b.dataset.act === 'addblock') chooseBlock();
+        else moveBlock(b.dataset.id, b.dataset.act === 'up' ? -1 : 1);
+    });
 
     startSite();
 

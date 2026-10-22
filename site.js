@@ -105,6 +105,7 @@
             { k: 'title', label: 'ページの名前', type: 'text', required: true },
             { k: 'slug', label: 'アドレス名（英小文字・数字・ハイフン。空なら自動）', type: 'text', hint: '例: petra → page.html?p=petra 。あとから変えるとリンクが変わります' },
             { k: 'description', label: '紹介文（任意）', type: 'textarea' },
+            { k: 'link_url', label: 'リンク先（任意）: 自分で作ったHTMLのファイル名やURL', type: 'text', hint: '入れると、一覧からこのページの代わりにそこへ移動します。例: game.html（同じフォルダに置いたファイル）や https://…' },
             { k: 'icon_url', label: 'アイコン（任意）', type: 'image' },
             { k: 'bg_light_url', label: '背景（ライトモード用・任意）', type: 'image', maxMB: 10 },
             { k: 'bg_dark_url', label: '背景（ダークモード用・任意）', type: 'image', maxMB: 10 },

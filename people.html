@@ -19,7 +19,7 @@
     <link rel="apple-touch-icon" href="favicon.png">
     <meta name="color-scheme" content="light dark">
     <meta name="darkreader-lock">
-    <link rel="stylesheet" href="style.css?v=9">
+    <link rel="stylesheet" href="style.css?v=10">
     <script>
         // 画面が描画される前にライト/ダークを決める（背景画像のちらつき・表示漏れ防止）
         (function () {
@@ -56,7 +56,7 @@
 
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-    <script src="site.js?v=10"></script>
+    <script src="site.js?v=11"></script>
     <script>
     state.pages = [];
 
@@ -67,6 +67,15 @@
         state.pages = p.data;
     }
 
+    // 「リンク先」が設定されていれば、自分で作ったHTMLなどへ。なければ、このサイトのページへ
+    function pageHref(p) {
+        if (p.link_url) {
+            if (/^https?:\/\//.test(p.link_url)) return safeUrl(p.link_url);
+            return safeIcon(p.link_url) || '#';
+        }
+        return `page.html?p=${encodeURIComponent(p.slug)}`;
+    }
+
     function renderPage() {
         $('#pgAdd').innerHTML = editMode ? '<button class="mini-btn add" data-act="add" data-kind="page">＋ ページを追加</button>' : '';
         const box = $('#pgArea');
@@ -74,7 +83,7 @@
         box.innerHTML = '<div class="member-grid">' + state.pages.map(p => {
             const icon = safeIcon(p.icon_url);
             const avatar = icon ? `<img class="member-avatar" src="${esc(icon)}" alt="">` : `<div class="member-avatar ph">${esc((p.title || '?').slice(0, 1))}</div>`;
-            return `<div class="member-card"><a class="member-main" href="page.html?p=${encodeURIComponent(p.slug)}">${avatar}<div class="member-info">
+            return `<div class="member-card"><a class="member-main" href="${esc(pageHref(p))}"${/^https?:/.test(p.link_url || '') ? ' target="_blank" rel="noopener"' : ''}>${avatar}<div class="member-info">
                 <div class="member-name">${esc(p.title)}</div>${p.description ? `<div class="member-intro">${esc(p.description)}</div>` : ''}
             </div></a>${adminBtns('page', p.id)}</div>`;
         }).join('') + '</div>';

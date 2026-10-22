@@ -527,3 +527,6 @@
         .pg-h { font-weight: bold; font-size: 16px; margin-bottom: 6px; }
         .pg-embed .video-container { margin-bottom: 0; }
         .pg-admin { display: flex; gap: 6px; margin-top: 6px; }
+
+        /* ===== 追加: 自分で書いたHTMLの枠 ===== */
+        .pg-html { width: 100%; border: 0; border-radius: 12px; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.4); display: block; }
