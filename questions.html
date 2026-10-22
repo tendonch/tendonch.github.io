@@ -58,6 +58,11 @@
             </div>
         </div>
 
+        <div class="section" id="qMineSec" style="display:none">
+            <div class="section-title">あなたが送った質問</div>
+            <div id="qMine"></div>
+        </div>
+
         <div class="section">
             <div class="section-title">みんなの質問と回答</div>
             <div id="qaArea"></div>
@@ -84,29 +89,57 @@
         }
     });
 
+    state.mine = [];
+
+    // 自分の質問を見つけるための合言葉（このブラウザだけに保存。サーバーには「ハッシュ」だけを保存）
+    const getToken = create => {
+        try {
+            let tok = localStorage.getItem('qToken');
+            if (!tok && create) { tok = crypto.randomUUID() + crypto.randomUUID(); localStorage.setItem('qToken', tok); }
+            return tok;
+        } catch (e) { return null; }
+    };
+    const sha256hex = async s => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))].map(b => b.toString(16).padStart(2, '0')).join('');
+
     async function loadPageData() {
+        state.mine = [];
         if (!sb) return;
         const q = await sb.from('questions').select('*').order('created_at', { ascending: false }).limit(100);
-        if (q.error) { console.warn('質問を取得できません（SQLを実行済みか確認してください）', q.error.message); state.questions = []; return; }
-        state.questions = q.data;
+        if (q.error) { console.warn('質問を取得できません（SQLを実行済みか確認してください）', q.error.message); state.questions = []; }
+        else state.questions = q.data;
+        const tok = getToken(false);
+        if (tok) {
+            const r = await sb.rpc('get_my_questions', { p_token: tok });
+            if (!r.error && Array.isArray(r.data)) state.mine = r.data;
+        }
+    }
+
+    function qCard(q, mine) {
+        const date = q.created_at ? new Date(q.created_at).toLocaleDateString('ja-JP') : '';
+        let tags = '';
+        if (mine) tags = `<span class="tag">${q.answer ? '回答あり' : '回答待ち'}</span>` + (q.published ? '' : '<span class="tag">あなただけに表示中</span>');
+        else tags = (q.published ? '' : '<span class="tag">非公開</span>') + (q.answer ? '' : '<span class="tag">未回答</span>');
+        return `<div class="member-card"><div class="member-main"><div class="member-info">
+            <div class="qa-q">Q. ${esc(q.message)}</div>
+            <div class="qa-meta">${esc(q.name || '匿名')} ・ ${esc(date)}${tags}</div>
+            ${q.answer ? `<div class="qa-a">${esc(q.answer)}</div>` : ''}
+        </div></div>${mine ? '' : adminBtns('question', q.id)}</div>`;
     }
 
     function renderPage() {
-        const list = state.questions.filter(q => editMode || q.published);
+        // 自分が送った質問は、回答前・非公開でも上に表示
+        const mineIds = new Set(state.mine.map(q => q.id));
+        $('#qMineSec').style.display = state.mine.length ? '' : 'none';
+        $('#qMine').innerHTML = state.mine.length ? '<div class="member-grid">' + state.mine.map(q => qCard(q, true)).join('') + '</div>' : '';
+
+        // みんなの質問（管理者の編集モード以外では、自分の分は上に出ているので省く）
+        const list = state.questions.filter(q => (editMode || q.published) && (editMode || !mineIds.has(q.id)));
         const box = $('#qaArea');
         if (!list.length) {
             box.innerHTML = '<div class="member-box">まだ公開されている質問はありません。</div>';
             return;
         }
-        box.innerHTML = '<div class="member-grid">' + list.map(q => {
-            const date = q.created_at ? new Date(q.created_at).toLocaleDateString('ja-JP') : '';
-            const tags = (q.published ? '' : '<span class="tag">非公開</span>') + (q.answer ? '' : '<span class="tag">未回答</span>');
-            return `<div class="member-card"><div class="member-main"><div class="member-info">
-                <div class="qa-q">Q. ${esc(q.message)}</div>
-                <div class="qa-meta">${esc(q.name || '匿名')} ・ ${esc(date)}${tags}</div>
-                ${q.answer ? `<div class="qa-a">${esc(q.answer)}</div>` : ''}
-            </div></div>${adminBtns('question', q.id)}</div>`;
-        }).join('') + '</div>';
+        box.innerHTML = '<div class="member-grid">' + list.map(q => qCard(q, false)).join('') + '</div>';
     }
 
     $('#qSend').onclick = async () => {
@@ -122,12 +155,16 @@
         try { last = Number(localStorage.getItem('qLast') || 0); } catch (e) {}
         if (Date.now() - last < 60000) return say('続けて送信するときは、1分ほど空けてください。', false);
         btn.disabled = true;
-        const { error } = await sb.from('questions').insert({ name: name || null, message });
+        const tok = getToken(true);
+        let owner_hash = null;
+        try { if (tok) owner_hash = await sha256hex(tok); } catch (e) {}
+        const { error } = await sb.from('questions').insert({ name: name || null, message, owner_hash });
         btn.disabled = false;
         if (error) return say('送信できませんでした。時間をおいてもう一度お試しください。', false);
         try { localStorage.setItem('qLast', String(Date.now())); } catch (e) {}
         $('#qMsg').value = '';
-        say('送信しました。ありがとうございます！', true);
+        say('送信しました。ありがとうございます！下の「あなたが送った質問」に表示されます。', true);
+        await reloadAll();
     };
 
     startSite();
