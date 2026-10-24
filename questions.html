@@ -19,7 +19,7 @@
     <link rel="apple-touch-icon" href="favicon.png">
     <meta name="color-scheme" content="light dark">
     <meta name="darkreader-lock">
-    <link rel="stylesheet" href="style.css?v=10">
+    <link rel="stylesheet" href="style.css?v=11">
     <script>
         // 画面が描画される前にライト/ダークを決める（背景画像のちらつき・表示漏れ防止）
         (function () {
@@ -44,13 +44,23 @@
         <h1>Ghost Club</h1>
         <p class="site-desc">質問受付</p>
 
-        <div class="section">
-            <div class="section-title">質問を送る</div>
+        <div id="qNav"></div>
+
+        <div class="section" id="qPickSec">
+            <div class="title-row">
+                <div class="section-title">質問先を選ぶ</div>
+                <div id="qPickAdd"></div>
+            </div>
+            <div id="qPick"></div>
+        </div>
+
+        <div class="section" id="qFormSec" style="display:none">
+            <div class="section-title" id="qFormTitle">質問を送る</div>
             <div class="member-box q-form">
                 <label for="qName">お名前（任意・ニックネームOK）</label>
                 <input type="text" id="qName" maxlength="30" placeholder="匿名">
                 <label for="qMsg">質問の内容（500文字まで）</label>
-                <textarea id="qMsg" maxlength="500" placeholder="企画やゲームのことなど、気軽にどうぞ"></textarea>
+                <textarea id="qMsg" maxlength="500" placeholder="気軽にどうぞ"></textarea>
                 <input type="text" id="qWebsite" class="q-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
                 <button class="send" id="qSend" type="button">送信する</button>
                 <p class="q-status" id="qStatus"></p>
@@ -63,8 +73,8 @@
             <div id="qMine"></div>
         </div>
 
-        <div class="section">
-            <div class="section-title">みんなの質問と回答</div>
+        <div class="section" id="qPubSec">
+            <div class="section-title" id="qPubTitle">みんなの質問と回答</div>
             <div id="qaArea"></div>
         </div>
 
@@ -72,24 +82,41 @@
 
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-    <script src="site.js?v=11"></script>
+    <script src="site.js?v=13"></script>
     <script>
-
     const Q_MAX = 500;
+    state.targets = [];
     state.questions = [];
+    state.mine = [];
+    let curTarget = null, targetMissing = false;
+    const toSlug = new URLSearchParams(location.search).get('to');
+    const targetName = id => { const t = state.targets.find(t => t.id === id); return t ? t.name : null; };
 
     Object.assign(FORMS, {
+        target: {
+            table: 'question_targets', listKey: 'targets', title: '質問先', defaults: { sort_order: 0 },
+            fields: [
+                { k: 'name', label: '質問先の名前', type: 'text', required: true },
+                { k: 'slug', label: 'アドレス名（英小文字・数字・ハイフン。空なら自動）', type: 'text', hint: '例: petra → questions.html?to=petra 。あとから変えるとリンクが変わります' },
+                { k: 'description', label: 'ひとこと説明（任意）', type: 'textarea' },
+                { k: 'icon_url', label: 'アイコン（任意）', type: 'image' },
+                { k: 'sort_order', label: '表示順（小さいほど上）', type: 'number' }
+            ],
+            validate(p) {
+                if (!p.slug) p.slug = randomSlug();
+                if (!/^[a-z0-9-]{2,40}$/.test(p.slug)) throw new Error('アドレス名は、英小文字・数字・ハイフンの2〜40文字にしてください');
+            }
+        },
         question: {
             table: 'questions', listKey: 'questions', title: '質問',
             fields: [
                 { k: 'message', label: '質問', type: 'textarea', required: true },
+                { k: 'target_id', label: '質問先', type: 'select', options: () => [['', '（指定なし）'], ...state.targets.map(t => [t.id, t.name])] },
                 { k: 'answer', label: '回答', type: 'textarea' },
                 { k: 'published', label: '公開する（回答と一緒にサイトに表示）', type: 'checkbox' }
             ]
         }
     });
-
-    state.mine = [];
 
     // 自分の質問を見つけるための合言葉（このブラウザだけに保存。サーバーには「ハッシュ」だけを保存）
     const getToken = create => {
@@ -102,10 +129,20 @@
     const sha256hex = async s => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))].map(b => b.toString(16).padStart(2, '0')).join('');
 
     async function loadPageData() {
-        state.mine = [];
+        state.targets = []; state.questions = []; state.mine = [];
+        curTarget = null; targetMissing = false;
         if (!sb) return;
-        const q = await sb.from('questions').select('*').order('created_at', { ascending: false }).limit(100);
-        if (q.error) { console.warn('質問を取得できません（SQLを実行済みか確認してください）', q.error.message); state.questions = []; }
+        const t = await sb.from('question_targets').select('*').order('sort_order').order('created_at').order('id');
+        if (t.error) console.warn('質問先を取得できません（SQLを実行済みか確認してください）', t.error.message);
+        else state.targets = t.data;
+        if (toSlug) {
+            curTarget = state.targets.find(x => x.slug === toSlug) || null;
+            targetMissing = !curTarget;
+        }
+        let qq = sb.from('questions').select('*').order('created_at', { ascending: false }).limit(100);
+        if (curTarget) qq = qq.eq('target_id', curTarget.id);
+        const q = await qq;
+        if (q.error) console.warn('質問を取得できません（SQLを実行済みか確認してください）', q.error.message);
         else state.questions = q.data;
         const tok = getToken(false);
         if (tok) {
@@ -114,11 +151,13 @@
         }
     }
 
-    function qCard(q, mine) {
+    function qCard(q, mine, showTarget) {
         const date = q.created_at ? new Date(q.created_at).toLocaleDateString('ja-JP') : '';
         let tags = '';
         if (mine) tags = `<span class="tag">${q.answer ? '回答あり' : '回答待ち'}</span>` + (q.published ? '' : '<span class="tag">あなただけに表示中</span>');
         else tags = (q.published ? '' : '<span class="tag">非公開</span>') + (q.answer ? '' : '<span class="tag">未回答</span>');
+        const tn = showTarget ? targetName(q.target_id) : null;
+        if (tn) tags += `<span class="tag">宛先: ${esc(tn)}</span>`;
         return `<div class="member-card"><div class="member-main"><div class="member-info">
             <div class="qa-q">Q. ${esc(q.message)}</div>
             <div class="qa-meta">${esc(q.name || '匿名')} ・ ${esc(date)}${tags}</div>
@@ -127,26 +166,59 @@
     }
 
     function renderPage() {
-        // 自分が送った質問は、回答前・非公開でも上に表示
+        const show = (id, on) => { $(id).style.display = on ? '' : 'none'; };
+        const inTarget = !!curTarget;
         const mineIds = new Set(state.mine.map(q => q.id));
-        $('#qMineSec').style.display = state.mine.length ? '' : 'none';
-        $('#qMine').innerHTML = state.mine.length ? '<div class="member-grid">' + state.mine.map(q => qCard(q, true)).join('') + '</div>' : '';
 
-        // みんなの質問（管理者の編集モード以外では、自分の分は上に出ているので省く）
-        const list = state.questions.filter(q => (editMode || q.published) && (editMode || !mineIds.has(q.id)));
-        const box = $('#qaArea');
-        if (!list.length) {
-            box.innerHTML = '<div class="member-box">まだ公開されている質問はありません。</div>';
-            return;
+        // ----- 上部（質問先の見出し / 戻るボタン） -----
+        if (inTarget) {
+            const icon = safeIcon(curTarget.icon_url);
+            $('#qNav').innerHTML = `<a class="back-btn" href="questions.html">← 質問先の一覧へ</a>
+                <div class="pg-title">${icon ? `<img class="member-avatar" src="${esc(icon)}" alt="">` : ''}<div><div class="pg-name">${esc(curTarget.name)} への質問</div>${curTarget.description ? `<div class="pg-desc">${esc(curTarget.description)}</div>` : ''}</div></div>`;
+            document.title = `${curTarget.name}への質問｜Ghost Club（ゴースト部）`;
+        } else if (targetMissing) {
+            $('#qNav').innerHTML = '<a class="back-btn" href="questions.html">← 質問先の一覧へ</a><div class="member-box">質問先が見つかりません。</div>';
+        } else {
+            $('#qNav').innerHTML = '';
         }
-        box.innerHTML = '<div class="member-grid">' + list.map(q => qCard(q, false)).join('') + '</div>';
+
+        // ----- 質問先の一覧（質問先を選ぶ画面） -----
+        show('#qPickSec', !inTarget && !targetMissing);
+        $('#qPickAdd').innerHTML = editMode ? '<button class="mini-btn add" data-act="add" data-kind="target">＋ 質問先を追加</button>' : '';
+        $('#qPick').innerHTML = state.targets.length
+            ? '<div class="member-grid">' + state.targets.map(t => {
+                const icon = safeIcon(t.icon_url);
+                const avatar = icon ? `<img class="member-avatar" src="${esc(icon)}" alt="">` : `<div class="member-avatar ph">${esc((t.name || '?').slice(0, 1))}</div>`;
+                return `<div class="member-card"><a class="member-main" href="questions.html?to=${encodeURIComponent(t.slug)}">${avatar}<div class="member-info">
+                    <div class="member-name">${esc(t.name)}</div>${t.description ? `<div class="member-intro">${esc(t.description)}</div>` : ''}
+                </div><div class="btn" style="background-color:var(--accent-group);flex-shrink:0">質問する ▶</div></a>${adminBtns('target', t.id)}</div>`;
+            }).join('') + '</div>'
+            : '<div class="member-box">質問先がまだ登録されていません。</div>';
+
+        // ----- 送信フォーム（質問先を選んだときだけ） -----
+        show('#qFormSec', inTarget);
+        if (inTarget) $('#qFormTitle').textContent = `${curTarget.name} に質問を送る`;
+
+        // ----- 自分が送った質問（回答前・非公開でも上に表示） -----
+        const mine = inTarget ? state.mine.filter(q => q.target_id === curTarget.id) : state.mine;
+        show('#qMineSec', mine.length > 0 && !targetMissing);
+        $('#qMine').innerHTML = mine.length ? '<div class="member-grid">' + mine.map(q => qCard(q, true, !inTarget)).join('') + '</div>' : '';
+
+        // ----- みんなの質問と回答 -----
+        $('#qPubTitle').textContent = inTarget ? `${curTarget.name} への質問と回答` : (editMode ? '届いた質問（管理者のみ・すべて表示）' : '最近の質問と回答');
+        show('#qPubSec', !targetMissing);
+        let list = state.questions.filter(q => (editMode || q.published) && (editMode || !mineIds.has(q.id)));
+        if (!inTarget && !editMode) list = list.slice(0, 20);
+        $('#qaArea').innerHTML = targetMissing ? '' : (list.length
+            ? '<div class="member-grid">' + list.map(q => qCard(q, false, !inTarget)).join('') + '</div>'
+            : '<div class="member-box">まだ公開されている質問はありません。</div>');
     }
 
     $('#qSend').onclick = async () => {
         const st = $('#qStatus'), btn = $('#qSend');
         const say = (t, ok) => { st.textContent = t; st.style.color = ok ? '#22c55e' : '#ef4444'; };
         if ($('#qWebsite').value) return;                       // ボット対策（人間には見えない欄）
-        if (!sb) return say('現在、質問を送信できません。', false);
+        if (!sb || !curTarget) return say('現在、質問を送信できません。', false);
         const name = $('#qName').value.trim().slice(0, 30);
         const message = $('#qMsg').value.trim();
         if (!message) return say('質問の内容を入力してください。', false);
@@ -158,7 +230,7 @@
         const tok = getToken(true);
         let owner_hash = null;
         try { if (tok) owner_hash = await sha256hex(tok); } catch (e) {}
-        const { error } = await sb.from('questions').insert({ name: name || null, message, owner_hash });
+        const { error } = await sb.from('questions').insert({ name: name || null, message, owner_hash, target_id: curTarget.id });
         btn.disabled = false;
         if (error) return say('送信できませんでした。時間をおいてもう一度お試しください。', false);
         try { localStorage.setItem('qLast', String(Date.now())); } catch (e) {}
@@ -168,7 +240,6 @@
     };
 
     startSite();
-
     </script>
 </body>
 </html>

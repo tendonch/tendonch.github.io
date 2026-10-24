@@ -19,7 +19,7 @@
     <link rel="apple-touch-icon" href="favicon.png">
     <meta name="color-scheme" content="light dark">
     <meta name="darkreader-lock">
-    <link rel="stylesheet" href="style.css?v=10">
+    <link rel="stylesheet" href="style.css?v=11">
     <script>
         // 画面が描画される前にライト/ダークを決める（背景画像のちらつき・表示漏れ防止）
         (function () {
@@ -56,13 +56,13 @@
 
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-    <script src="site.js?v=11"></script>
+    <script src="site.js?v=13"></script>
     <script>
     state.pages = [];
 
     async function loadPageData() {
         if (!sb) return;
-        const p = await sb.from('pages').select('*').is('parent_id', null).order('sort_order').order('created_at');
+        const p = await sb.from('pages').select('*').is('parent_id', null).eq('admin_only', false).order('sort_order').order('created_at');
         if (p.error) { console.warn('ページを取得できません（SQLを実行済みか確認してください）', p.error.message); state.pages = []; return; }
         state.pages = p.data;
     }

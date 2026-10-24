@@ -158,7 +158,7 @@
                     `<label style="display:inline-flex;align-items:center;gap:6px;margin:4px 14px 0 0;color:var(--text-color);font-size:14px"><input type="checkbox" value="${esc(val)}" ${cur.includes(val) ? 'checked' : ''}> ${esc(lab)}</label>`).join('') + '</div>';
             }
             let input;
-            if (f.type === 'select') input = `<select data-k="${f.k}">` + f.options.map(([val, lab]) => `<option value="${esc(val)}" ${val === raw ? 'selected' : ''}>${esc(lab)}</option>`).join('') + '</select>';
+            if (f.type === 'select') input = `<select data-k="${f.k}">` + (typeof f.options === 'function' ? f.options() : f.options).map(([val, lab]) => `<option value="${esc(val)}" ${val === (raw ?? '') ? 'selected' : ''}>${esc(lab)}</option>`).join('') + '</select>';
             else if (f.type === 'textarea' || f.type === 'lines' || f.type === 'files') input = `<textarea data-k="${f.k}">${esc(v)}</textarea>` + (f.type === 'files' ? `<input type="file" multiple data-files="${f.k}" style="margin-top:6px">` : '');
             else if (f.type === 'image' || f.type === 'file') input = `<input type="text" data-k="${f.k}" value="${esc(v)}" placeholder="${f.type === 'image' ? '画像のURL' : 'ダウンロードURL'}（またはファイルを選択）"><input type="file" ${f.type === 'image' ? 'accept="image/*"' : ''} data-file="${f.k}" style="margin-top:6px">`;
             else input = `<input type="${f.type}" data-k="${f.k}" value="${esc(v)}">`;
@@ -311,6 +311,7 @@
                 if (isAdmin) {
                     acct += `<button class="set-btn on" type="button" data-set="edit">${editMode ? '編集モードを終了' : '編集モード'}</button>
                              <button class="set-btn" type="button" data-set="stats">アクセス統計を見る</button>`;
+                    acct += '<a class="set-btn" href="page.html?p=manual" style="text-decoration:none;text-align:center;box-sizing:border-box">管理者マニュアル</a>';
                 } else {
                     acct += `<div class="hint">このDiscordアカウントには管理権限がありません。<br>${esc(adminDebug)}</div>`;
                 }

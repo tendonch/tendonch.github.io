@@ -19,7 +19,7 @@
     <link rel="apple-touch-icon" href="favicon.png">
     <meta name="color-scheme" content="light dark">
     <meta name="darkreader-lock">
-    <link rel="stylesheet" href="style.css?v=10">
+    <link rel="stylesheet" href="style.css?v=11">
     <script>
         // 画面が描画される前にライト/ダークを決める（背景画像のちらつき・表示漏れ防止）
         (function () {
@@ -51,7 +51,7 @@
 
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-    <script src="site.js?v=11"></script>
+    <script src="site.js?v=13"></script>
     <script>
     // 追加できるブロックの種類
     const BLOCK_TYPES = {
@@ -69,6 +69,9 @@
         embed: { btn: '埋め込み（YouTubeなどの動画）', title: '埋め込み', fields: [
             { k: 'label', label: 'タイトル（任意）', type: 'text' },
             { k: 'url', label: '埋め込むページのURL', type: 'text', required: true, hint: 'YouTube・ニコニコ動画のURLを貼ると、自動で埋め込み用に直します。再生リストやチャンネルのURLもOK' } ] },
+        video: { btn: '動画ファイル（mp4など）', title: '動画', fields: [
+            { k: 'label', label: 'タイトル（任意）', type: 'text' },
+            { k: 'url', label: '動画ファイル', type: 'file', required: true, hint: 'mp4などを選ぶか、URLを入力（ファイルは50MBまで。大きいものはYouTubeの限定公開を「埋め込み」で）' } ] },
         html: { btn: '自分で書いたHTML（コードを貼り付け）', title: 'HTML', fields: [
             { k: 'label', label: 'タイトル（任意）', type: 'text' },
             { k: 'content', label: 'HTMLコード', type: 'textarea', required: true, hint: '安全のため、独立した枠の中で表示されます（このサイトのログイン情報やlocalStorageには触れません）' },
@@ -89,7 +92,7 @@
             async extra(payload) {
                 const e = { page_id: cur.id, type, sort_order: nextOrder() };
                 if (type === 'page') {           // 新しい子ページを作ってつなぐ
-                    const r = await sb.from('pages').insert({ slug: randomSlug(), title: payload.label, parent_id: cur.id }).select();
+                    const r = await sb.from('pages').insert({ slug: randomSlug(), title: payload.label, parent_id: cur.id, admin_only: !!cur.admin_only }).select();
                     if (r.error || !r.data || !r.data.length) throw new Error('新しいページを作れませんでした');
                     e.target_page_id = r.data[0].id;
                 }
@@ -167,6 +170,8 @@
             } else {
                 inner = linkCard(safeUrl(b.url), b.label || '埋め込めないURLです', 'クリックして開く', '開く', 'var(--accent-group)', 'target="_blank" rel="noopener"');
             }
+        } else if (b.type === 'video') {
+            inner = `<div class="pg-embed">${b.label ? `<div class="sub-section-title">${esc(b.label)}</div>` : ''}<video class="pg-video" controls preload="metadata" src="${esc(safeUrl(b.url))}"></video></div>`;
         } else if (b.type === 'html') {
             const hh = Math.min(Math.max(Number(b.height) || 400, 100), 2000);
             inner = `<div class="pg-embed">${b.label ? `<div class="sub-section-title">${esc(b.label)}</div>` : ''}<iframe class="pg-html" style="height:${hh}px" sandbox="allow-scripts allow-popups allow-forms allow-modals" loading="lazy" srcdoc="${esc(b.content)}" title="${esc(b.label || 'HTML')}"></iframe></div>`;
@@ -198,7 +203,7 @@
         $('#ogUrl').setAttribute('href', pageUrl);
         $('#ogUrl').setAttribute('content', pageUrl);
         $('#canon').setAttribute('href', pageUrl);
-        const back = cur.parent_id && parentSlug ? `page.html?p=${encodeURIComponent(parentSlug)}` : 'people.html';
+        const back = cur.parent_id && parentSlug ? `page.html?p=${encodeURIComponent(parentSlug)}` : (cur.admin_only ? './' : 'people.html');
         const icon = safeIcon(cur.icon_url);
         head.innerHTML = `<a class="back-btn" href="${back}">← 戻る</a>
             <div class="pg-title">${icon ? `<img class="member-avatar" src="${esc(icon)}" alt="">` : ''}<div><div class="pg-name">${esc(cur.title)}</div>${cur.description ? `<div class="pg-desc">${esc(cur.description)}</div>` : ''}</div></div>

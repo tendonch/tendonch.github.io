@@ -29,7 +29,7 @@
     </script>
     <meta name="color-scheme" content="light dark">
     <meta name="darkreader-lock">
-    <link rel="stylesheet" href="style.css?v=10">
+    <link rel="stylesheet" href="style.css?v=11">
     <script>
         // 画面が描画される前にライト/ダークを決める（背景画像のちらつき・表示漏れ防止）
         (function () {
@@ -94,7 +94,7 @@
 
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-    <script src="site.js?v=11"></script>
+    <script src="site.js?v=13"></script>
     <script>
     // データベースに接続できないとき・未設定のときに表示する内容
     const FALLBACK_MEMBERS = [];
@@ -125,8 +125,8 @@
     async function loadPageData() {
         if (!sb) return;
         const [m, c] = await Promise.all([
-            sb.from('members').select('*').order('sort_order').order('created_at'),
-            sb.from('channels').select('*').order('sort_order').order('created_at')
+            sb.from('members').select('*').order('sort_order').order('created_at').order('id'),
+            sb.from('channels').select('*').order('sort_order').order('created_at').order('id')
         ]);
         if (m.error || c.error) { console.error('データ取得エラー', m.error || c.error); return; }
         state.members = m.data;
